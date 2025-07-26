@@ -42,99 +42,78 @@ export class Header {
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         height: 100%;
       ">
-        <div style="display: flex; align-items: center; gap: 1rem;">
-          <div id="fecha"></div>
-          <div id="hora"></div>
+        <div style="
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+        ">
+          <h1 style="
+            margin: 0;
+            font-size: var(--font-size-lg);
+            color: var(--gray-800);
+            font-weight: 600;
+          ">Visitas al WC</h1>
+          <div style="color: var(--gray-600); font-size: var(--font-size-base);">
+            ${DateUtils.formatearFecha(new Date())}
+          </div>
         </div>
-        
         <div style="position: relative;">
-          <button 
-            id="userMenuBtn"
-            style="
-              padding: 0.5rem 1rem;
-              background: none;
-              border: 1px solid #0044cc;
-              color: #0044cc;
-              border-radius: 4px;
-              cursor: pointer;
-              font-size: 0.9rem;
-              transition: all 0.2s;
-              display: flex;
-              align-items: center;
-              gap: 0.5rem;
-            "
-          >
+          <button id="userMenuBtn" style="
+            padding: 0.5rem 1rem;
+            background: none;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: var(--font-size-base);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+          ">
             ${userIdentifier}
             <span style="font-size: 0.7rem;">▼</span>
           </button>
-          
-          <div 
-            id="userMenu" 
-            style="
-              display: none;
-              position: absolute;
-              top: 100%;
-              right: 0;
-              background: white;
-              border: 1px solid #ddd;
-              border-radius: 4px;
-              box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-              min-width: 180px;
-              z-index: 1000;
-              margin-top: 2px;
-            "
-          >
+          <div id="userMenu" style="
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            min-width: 180px;
+            z-index: 1000;
+            margin-top: 2px;
+          ">
             ${isAdmin ? `
-              <div 
-                class="menu-item" 
-                data-action="visitasWC"
-                style="
-                  padding: 0.7rem 1rem;
-                  cursor: pointer;
-                  border-bottom: 1px solid #eee;
-                  transition: background 0.2s;
-                "
-              >
-                📊 Visitas al WC
-              </div>
-              <div 
-                class="menu-item" 
-                data-action="cargaAlumnos"
-                style="
-                  padding: 0.7rem 1rem;
-                  cursor: pointer;
-                  border-bottom: 1px solid #eee;
-                  transition: background 0.2s;
-                "
-              >
-                📁 Carga de Alumnos
-              </div>
-              <div 
-                class="menu-item" 
-                data-action="borrarBD"
-                style="
-                  padding: 0.7rem 1rem;
-                  cursor: pointer;
-                  border-bottom: 1px solid #eee;
-                  transition: background 0.2s;
-                  color: #dc3545;
-                "
-              >
-                🗑️ Borrar Base de Datos
-              </div>
-            ` : ''}
-            <div 
-              class="menu-item" 
-              data-action="logout"
-              style="
+              <div class="menu-item" data-action="visitasWC" style="
                 padding: 0.7rem 1rem;
                 cursor: pointer;
+                border-bottom: 1px solid #eee;
                 transition: background 0.2s;
-                color: #dc3545;
-              "
-            >
-              🚪 Cerrar Sesión
-            </div>
+              ">📊 Visitas al WC</div>
+              <div class="menu-item" data-action="cargaAlumnos" style="
+                padding: 0.7rem 1rem;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                transition: background 0.2s;
+              ">📁 Carga de Alumnos</div>
+              <div class="menu-item" data-action="borrarBD" style="
+                padding: 0.7rem 1rem;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                transition: background 0.2s;
+                color: var(--danger-color);
+              ">🗑️ Borrar Base de Datos</div>
+            ` : ''}
+            <div class="menu-item" data-action="logout" style="
+              padding: 0.7rem 1rem;
+              cursor: pointer;
+              transition: background 0.2s;
+              color: var(--danger-color);
+            ">🚪 Cerrar Sesión</div>
           </div>
         </div>
       </div>

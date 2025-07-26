@@ -19,6 +19,12 @@ export class ClaseView {
           margin: 0 auto;
           padding: 1rem;
         ">
+          <h2 style="
+            margin: 0 0 1.5rem 0;
+            font-size: var(--font-size-lg);
+            color: var(--gray-800);
+            font-weight: 600;
+          ">Clase: ${this.formatearClase(clase)}</h2>
           <div id="alumnos-container"></div>
         </div>
       `;
@@ -147,5 +153,15 @@ export class ClaseView {
     if (card) {
       card.actualizarTarjeta();
     }
+  }
+
+  formatearClase(clase) {
+    // Usar el mismo formato que TabsNav
+    const match = clase?.match(/(\d)º\s*(ESO|BACH)\s+([A-Z])/i);
+    if (match) {
+      const [, numero, nivel, letra] = match;
+      return nivel.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+    }
+    return clase || '';
   }
 } 
