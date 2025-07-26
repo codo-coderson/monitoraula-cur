@@ -113,15 +113,40 @@ class App {
 
       // Cargar clases y renderizar pestañas
       const clases = DatabaseService.getClases();
+      console.log('🔍 Main.js: Estado final de clases:', {
+        clases: clases,
+        length: clases?.length,
+        isLoaded: DatabaseService.isLoaded()
+      });
+      
       if (clases && clases.length > 0) {
-        this.tabsNav = new TabsNav(
-          document.getElementById('tabs-nav'),
-          clases,
-          clases[0],
-          (clase) => this.navegarA('clase', { clase })
-        );
-        this.tabsNav.render();
-        console.log('✅ Pestañas renderizadas');
+        // Asegurar que el contenedor de pestañas esté visible
+        const tabsContainer = document.getElementById('tabs-nav');
+        if (tabsContainer) {
+          tabsContainer.style.display = 'block';
+          
+          this.tabsNav = new TabsNav(
+            tabsContainer,
+            clases,
+            clases[0],
+            (clase) => this.navegarA('clase', { clase })
+          );
+          this.tabsNav.render();
+          console.log('✅ Pestañas renderizadas con', clases.length, 'clases');
+          
+          // Verificar que las pestañas se renderizaron correctamente
+          setTimeout(() => {
+            const tabElements = tabsContainer.querySelectorAll('.tab');
+            console.log('🔍 Verificación pestañas:', {
+              tabsContainer: !!tabsContainer,
+              containerVisible: tabsContainer.style.display,
+              numTabs: tabElements.length,
+              innerHTML: tabsContainer.innerHTML.length > 0
+            });
+          }, 100);
+        } else {
+          console.error('❌ No se encontró el contenedor de pestañas');
+        }
 
         // TODOS los usuarios van por defecto a "Visitas al WC" (vista clase)
         // Determinar clase inicial (última visitada o primera disponible)
