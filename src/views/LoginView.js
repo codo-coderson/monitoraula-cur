@@ -128,28 +128,15 @@ export class LoginView {
         errorMessage.textContent = '';
         successMessage.style.display = 'none';
 
-                // Intentar login
+        // Intentar login
         await AuthService.login(email, password);
 
         // Emitir evento para refrescar header después del login
         window.dispatchEvent(new CustomEvent('user-logged-in'));
 
-        // Si el login es exitoso y el usuario es admin, ir al menú
-        if (AuthService.isAdmin) {
-                        // Navegación removida - se maneja en main.js
-        } else {
-          // Si no es admin, ir directamente a la última clase visitada o la primera disponible
-                      // Navegación removida - se maneja en main.js
-            // window.dispatchEvent(new CustomEvent('navegacion', { 
-                          // detail: { 
-                // vista: 'clase',
-                              // params: { clase: AuthService.lastVisitedClass }
-              // }
-            // }));
-        }
-
       } catch (error) {
         errorMessage.textContent = error.message;
+      } finally {
         submitButton.disabled = false;
         submitButton.textContent = originalText;
       }
