@@ -106,7 +106,7 @@ export class Header {
                 border-bottom: 1px solid #eee;
                 transition: background 0.2s;
                 color: var(--danger-color);
-              ">🗑️ Borrar Base de Datos</div>
+              ">🗑️ Borrar la BD</div>
             ` : ''}
             <div class="menu-item" data-action="logout" style="
               padding: 0.7rem 1rem;

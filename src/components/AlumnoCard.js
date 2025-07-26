@@ -48,7 +48,15 @@ export class AlumnoCard {
     const mediaElement = document.getElementById(`media-${this.alumnoId}`);
     if (mediaElement) {
       const media = DateUtils.calcularMediaSalidas(registros);
-      mediaElement.textContent = `Media últimos 30 días: ${media.toFixed(2)} salidas/día`;
+      mediaElement.innerHTML = `
+        <div style="
+          font-size: var(--font-size-sm);
+          color: var(--gray-600);
+          margin-top: 0.25rem;
+        ">
+          ${media.toFixed(2)} salidas/día en los últimos 30 días
+        </div>
+      `;
     }
   }
 

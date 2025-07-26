@@ -8,16 +8,12 @@ export const DateUtils = {
   },
 
   formatearFecha(fecha) {
-    const dias = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
-    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-    
-    const date = new Date(fecha);
-    const diaSemana = dias[date.getDay()];
-    const diaMes = date.getDate();
-    const mes = meses[date.getMonth()];
-    const anio = date.getFullYear();
-    
-    return `${diaSemana} ${diaMes} de ${mes} de ${anio}`;
+    const dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const dia = dias[fecha.getDay()];
+    const dd = String(fecha.getDate()).padStart(2, '0');
+    const mm = String(fecha.getMonth() + 1).padStart(2, '0');
+    const yy = String(fecha.getFullYear()).slice(-2);
+    return `${dia} ${dd}/${mm}/${yy}`;
   },
 
   formatearHora(date = new Date()) {

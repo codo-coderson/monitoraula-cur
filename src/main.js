@@ -7,11 +7,24 @@ import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
+import { FontSizeService } from './utils/fontsize.js';
 
 class App {
   constructor() {
     console.log('🚀 Iniciando aplicación...');
     
+    // Inicializar tamaño de fuente
+    FontSizeService.init();
+
+    // Escuchar eventos de cambio de tamaño de fuente
+    window.addEventListener('font-size-change', (event) => {
+      if (event.detail === 'increase') {
+        FontSizeService.increase();
+      } else if (event.detail === 'decrease') {
+        FontSizeService.decrease();
+      }
+    });
+
     this.container = document.getElementById('app');
     if (!this.container) {
       console.error('❌ No se encontró el contenedor #app');
