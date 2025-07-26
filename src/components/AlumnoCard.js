@@ -30,7 +30,6 @@ export class AlumnoCard {
 
     // Usar la caché global para los registros
     this.actualizarTarjeta(DatabaseService.getRegistrosWC(this.clase, this.alumnoId));
-    // Suscribirse a cambios globales ya lo hace la app principal
   }
 
   actualizarTarjeta(registros) {
@@ -66,12 +65,13 @@ export class AlumnoCard {
       const hora = i + 1;
       const registro = salidas.find(s => s.hora === hora);
       const activa = Boolean(registro);
-      const esPropio = activa && registro.usuario === usuarioActual;
+      const esPropio = activa && registro?.usuario === usuarioActual;
+      const usuarioMarca = activa ? registro.usuario.split('@')[0] : '';
       
       const estilo = activa
         ? (esPropio
-            ? 'background-color: #0044cc; color: #fff;'
-            : 'background-color: #aaa; color: #fff; opacity: 0.7; cursor: not-allowed;')
+            ? 'background-color: var(--primary-color); color: white;'
+            : 'background-color: #aaa; color: white; opacity: 0.7; cursor: help;')
         : 'background-color: #f5f5f5; color: #333;';
 
       return `
@@ -81,12 +81,13 @@ export class AlumnoCard {
             data-hora="${hora}"
             data-activa="${activa}"
             data-espropio="${esPropio}"
+            title="${activa ? `Marcado por: ${usuarioMarca}` : ''}"
             style="
               ${estilo}
               border: none;
               padding: 0.5rem 1rem;
               border-radius: 4px;
-              cursor: pointer;
+              cursor: ${activa && !esPropio ? 'help' : 'pointer'};
               transition: all 0.2s ease;
             "
             ${activa && !esPropio ? 'disabled' : ''}

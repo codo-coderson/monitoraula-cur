@@ -8,6 +8,7 @@ import { LoginView } from './views/LoginView.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
 import { FontSizeService } from './utils/fontsize.js';
+import { CleanupService } from './services/cleanup.js';
 
 class App {
   constructor() {
@@ -184,6 +185,29 @@ class App {
         await this.navegarA('login');
         return;
       }
+
+      // Ejecutar limpieza de registros antiguos
+      await CleanupService.limpiarRegistrosAntiguos();
+
+      // Programar limpieza diaria a las 3 AM
+      const ahora = new Date();
+      const proximaLimpieza = new Date(
+        ahora.getFullYear(),
+        ahora.getMonth(),
+        ahora.getDate() + 1, // mañana
+        3, // 3 AM
+        0,
+        0
+      );
+      const tiempoHastaLimpieza = proximaLimpieza - ahora;
+      setTimeout(async () => {
+        await CleanupService.limpiarRegistrosAntiguos();
+        // Programar siguientes limpiezas cada 24 horas
+        setInterval(
+          () => CleanupService.limpiarRegistrosAntiguos(),
+          24 * 60 * 60 * 1000
+        );
+      }, tiempoHastaLimpieza);
 
       // Refrescar header después del login para mostrar el usuario correcto
       console.log('🔄 Refrescando header tras autenticación...');

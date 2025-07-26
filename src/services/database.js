@@ -1,10 +1,5 @@
-import { ref, set, update, remove, onValue, get, query, orderByKey, startAt, endAt } from 'firebase/database';
+import { ref, set, update, remove, onValue, get } from 'firebase/database';
 import { db } from '../config/firebase';
-
-// Constantes
-const MAX_CLASES = 15;
-const MAX_ALUMNOS_POR_CLASE = 40;
-const DIAS_MANTENER_REGISTROS = 30;
 
 // Caché global en RAM
 const cache = {
@@ -26,11 +21,11 @@ export const DatabaseService = {
     unsubscribe = onValue(mainRef, (snapshot) => {
       console.log('🔍 DatabaseService: Datos recibidos de Firebase');
       const data = snapshot.val() || {};
+      console.log('🔍 DatabaseService: Datos completos:', data);
       
-      // Validar y limpiar datos
-      cache.clases = this.validarClases(data.clases || []);
-      cache.alumnos = this.validarAlumnos(data.alumnos || {});
-      cache.registros = this.limpiarRegistrosAntiguos(data.registros || {});
+      cache.clases = data.clases || [];
+      cache.alumnos = data.alumnos || {};
+      cache.registros = data.registros || {};
       cache.loaded = true;
       
       console.log('🔍 DatabaseService: Caché actualizado:', {
@@ -44,60 +39,6 @@ export const DatabaseService = {
     }, (error) => {
       console.error('❌ DatabaseService: Error en suscripción:', error);
     });
-  },
-
-  // Validaciones
-  validarClases(clases) {
-    // Limitar número de clases y validar formato
-    return clases
-      .slice(0, MAX_CLASES)
-      .filter(clase => /^\d°\s*(ESO|BACH)\s+[A-Z]$/i.test(clase));
-  },
-
-  validarAlumnos(alumnos) {
-    const alumnosValidados = {};
-    for (const [clase, alumnosClase] of Object.entries(alumnos)) {
-      // Validar que la clase existe
-      if (!cache.clases.includes(clase)) continue;
-      
-      // Limitar alumnos por clase
-      const alumnosArray = Object.entries(alumnosClase)
-        .slice(0, MAX_ALUMNOS_POR_CLASE)
-        .map(([id, data]) => [id, { nombre: data.nombre || id }]);
-      
-      if (alumnosArray.length > 0) {
-        alumnosValidados[clase] = Object.fromEntries(alumnosArray);
-      }
-    }
-    return alumnosValidados;
-  },
-
-  limpiarRegistrosAntiguos(registros) {
-    const fechaLimite = new Date();
-    fechaLimite.setDate(fechaLimite.getDate() - DIAS_MANTENER_REGISTROS);
-    const fechaLimiteStr = fechaLimite.toISOString().split('T')[0];
-
-    const registrosLimpios = {};
-    for (const [clase, registrosClase] of Object.entries(registros)) {
-      if (!cache.clases.includes(clase)) continue;
-      
-      registrosLimpios[clase] = {};
-      for (const [alumno, registrosAlumno] of Object.entries(registrosClase)) {
-        if (!cache.alumnos[clase]?.[alumno]) continue;
-        
-        const registrosFiltrados = Object.entries(registrosAlumno)
-          .filter(([fecha]) => fecha >= fechaLimiteStr)
-          .reduce((acc, [fecha, datos]) => {
-            acc[fecha] = datos;
-            return acc;
-          }, {});
-          
-        if (Object.keys(registrosFiltrados).length > 0) {
-          registrosLimpios[clase][alumno] = registrosFiltrados;
-        }
-      }
-    }
-    return registrosLimpios;
   },
 
   unsubscribeAll() {
@@ -162,68 +103,27 @@ export const DatabaseService = {
     });
   },
 
-  // Escrituras con validación
+  // Escrituras
   async setAlumno(clase, alumnoId, data) {
     await set(ref(db, `alumnos/${clase}/${alumnoId}`), data);
   },
   async setRegistroWC(clase, alumnoId, fecha, data) {
-    // Validar fecha
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      throw new Error('Formato de fecha inválido');
-    }
-    
-    // Validar que no es una fecha futura
-    const fechaActual = new Date().toISOString().split('T')[0];
-    if (fecha > fechaActual) {
-      throw new Error('No se pueden registrar salidas futuras');
-    }
-
-    // Validar clase y alumno
-    if (!cache.clases.includes(clase)) {
-      throw new Error('Clase no válida');
-    }
-    if (!cache.alumnos[clase]?.[alumnoId]) {
-      throw new Error('Alumno no válido');
-    }
-
-    await set(ref(db, `registros/${clase}/${alumnoId}/${fecha}`), {
-      ...data,
-      hora: data.hora || new Date().toLocaleTimeString(),
-      timestamp: Date.now()
-    });
+    await set(ref(db, `registros/${clase}/${alumnoId}/${fecha}`), data);
   },
   async cargarAlumnosDesdeExcel(data) {
     const updates = {};
     const clases = new Set();
-
-    // Validar datos antes de la carga
-    for (const row of data) {
+    data.forEach(row => {
       const { Alumno: nombre, Curso: clase } = row;
-      if (!nombre || !clase || !this.validarClases([clase]).length) continue;
-      
+      if (!nombre || !clase) return;
       clases.add(clase);
-      if (clases.size > MAX_CLASES) {
-        throw new Error(`Máximo ${MAX_CLASES} clases permitidas`);
-      }
-
-      const alumnoId = nombre.replace(/\s+/g, '_').replace(/[,./\\(){}[\]]/g, '');
-      const alumnosEnClase = Object.keys(updates).filter(key => 
-        key.startsWith(`alumnos/${clase}/`)).length;
-      
-      if (alumnosEnClase >= MAX_ALUMNOS_POR_CLASE) {
-        console.warn(`Clase ${clase} ha alcanzado el límite de ${MAX_ALUMNOS_POR_CLASE} alumnos`);
-        continue;
-      }
-
+      const alumnoId = nombre.replace(/\s+/g, '_').replace(/,/g, '');
       updates[`alumnos/${clase}/${alumnoId}`] = { nombre };
-    }
-
-    if (Object.keys(updates).length > 0) {
-      await update(ref(db), {
-        'clases': Array.from(clases),
-        ...updates
-      });
-    }
+    });
+    await update(ref(db), {
+      'clases': Array.from(clases),
+      ...updates
+    });
   },
   async borrarBaseDeDatos() {
     await remove(ref(db));
