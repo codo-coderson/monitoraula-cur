@@ -70,7 +70,7 @@ export class AlumnoCard {
     // Actualizar media de salidas
     const mediaElement = document.getElementById(`media-${this.alumnoId}`);
     if (mediaElement) {
-      const media = DateUtils.calcularMediaSalidas(registros);
+      const media = DatabaseService.calcularMediaSalidasAlumno(this.clase, this.alumnoId);
       const mediaColor = media >= 5 ? '#ff0000' : 
                         media >= 4 ? '#cc0000' :
                         media >= 3 ? '#cc6600' :

@@ -8,8 +8,8 @@ export class InformeView {
 
   async render(clase, alumnoId) {
     const alumno = DatabaseService.getAlumnosPorClase(clase)[alumnoId];
-    const registros = DatabaseService.getRegistrosWC(clase, alumnoId);
-    const diasConRegistros = this.obtenerUltimos30DiasLectivos(registros);
+    const diasLectivos = DatabaseService.getUltimosNDiasLectivos();
+    const registros = DatabaseService.getRegistrosAlumnoPorDias(clase, alumnoId, diasLectivos);
 
     this.container.innerHTML = `
       <div style="
@@ -29,7 +29,7 @@ export class InformeView {
           width: 100%;
           margin-bottom: 2rem;
         ">
-          ${this.generarGrafico(diasConRegistros)}
+          ${this.generarGrafico(registros)}
         </div>
 
         <!-- Espacio para el botón flotante -->
@@ -62,25 +62,8 @@ export class InformeView {
     `;
   }
 
-  obtenerUltimos30DiasLectivos(registros) {
-    // Obtener todas las fechas con registros
-    const fechas = Object.keys(registros).sort();
-    
-    // Si hay menos de 30 días, devolver todos
-    if (fechas.length <= 30) return fechas.map(fecha => ({
-      fecha,
-      salidas: (registros[fecha]?.salidas || []).length
-    }));
-
-    // Obtener los últimos 30 días con registros
-    return fechas.slice(-30).map(fecha => ({
-      fecha,
-      salidas: (registros[fecha]?.salidas || []).length
-    }));
-  }
-
-  generarGrafico(dias) {
-    const maxSalidas = Math.max(...dias.map(d => d.salidas), 5); // Mínimo 5 para escala
+  generarGrafico(registros) {
+    const maxSalidas = Math.max(...registros.map(d => d.salidas), 5); // Mínimo 5 para escala
     const barWidth = '90%'; // Ancho de las barras
     const colors = ['#e3f2fd', '#bbdefb']; // Colores alternos suaves
 
@@ -89,7 +72,7 @@ export class InformeView {
         width: 100%;
         font-size: var(--font-size-sm);
       ">
-        ${dias.map((dia, index) => {
+        ${registros.map((dia, index) => {
           const porcentaje = (dia.salidas / maxSalidas) * 100;
           const fecha = new Date(dia.fecha);
           const fechaFormateada = DateUtils.formatearFechaCorta(fecha);

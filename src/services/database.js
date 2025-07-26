@@ -128,4 +128,51 @@ export const DatabaseService = {
   async borrarBaseDeDatos() {
     await remove(ref(db));
   },
+
+  // Obtener todos los días lectivos (días con al menos una salida en cualquier clase)
+  getDiasLectivos() {
+    const diasLectivos = new Set();
+    
+    // Recorrer todas las clases y alumnos
+    Object.values(cache.registros || {}).forEach(clase => {
+      Object.values(clase || {}).forEach(alumno => {
+        Object.entries(alumno || {}).forEach(([fecha, registro]) => {
+          if (registro?.salidas?.length > 0) {
+            diasLectivos.add(fecha);
+          }
+        });
+      });
+    });
+
+    // Convertir a array y ordenar
+    return Array.from(diasLectivos).sort();
+  },
+
+  // Obtener los últimos N días lectivos
+  getUltimosNDiasLectivos(n = 30) {
+    const diasLectivos = this.getDiasLectivos();
+    return diasLectivos.slice(-n);
+  },
+
+  // Obtener registros de un alumno para días específicos
+  getRegistrosAlumnoPorDias(clase, alumnoId, dias) {
+    const registrosAlumno = cache.registros[clase]?.[alumnoId] || {};
+    return dias.map(fecha => ({
+      fecha,
+      salidas: (registrosAlumno[fecha]?.salidas || []).length
+    }));
+  },
+
+  // Calcular media considerando todos los días lectivos
+  calcularMediaSalidasAlumno(clase, alumnoId) {
+    const diasLectivos = this.getUltimosNDiasLectivos();
+    if (diasLectivos.length === 0) return 0;
+
+    const registrosAlumno = cache.registros[clase]?.[alumnoId] || {};
+    const totalSalidas = diasLectivos.reduce((total, fecha) => {
+      return total + (registrosAlumno[fecha]?.salidas?.length || 0);
+    }, 0);
+
+    return totalSalidas / diasLectivos.length;
+  }
 }; 
