@@ -136,17 +136,16 @@ export class LoginView {
 
         // Si el login es exitoso y el usuario es admin, ir al menú
         if (AuthService.isAdmin) {
-          window.dispatchEvent(new CustomEvent('navegacion', { 
-            detail: { vista: 'menu' }
-          }));
+                        // Navegación removida - se maneja en main.js
         } else {
           // Si no es admin, ir directamente a la última clase visitada o la primera disponible
-          window.dispatchEvent(new CustomEvent('navegacion', { 
-            detail: { 
-              vista: 'clase',
-              params: { clase: AuthService.lastVisitedClass }
-            }
-          }));
+                      // Navegación removida - se maneja en main.js
+            // window.dispatchEvent(new CustomEvent('navegacion', { 
+                          // detail: { 
+                // vista: 'clase',
+                              // params: { clase: AuthService.lastVisitedClass }
+              // }
+            // }));
         }
 
       } catch (error) {
