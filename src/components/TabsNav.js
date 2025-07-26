@@ -12,22 +12,14 @@ export class TabsNav {
       esBach: this.esBachillerato(clase)
     });
 
-    // Si ya está en formato corto (1A, 2B, etc.), verificar si es bachillerato
-    if (/^\d[A-Z]$/.test(clase)) {
-      return clase;
-    }
-    if (/^\d[bB][A-Z]$/.test(clase)) {
-      return clase.charAt(0) + 'b' + clase.charAt(2);
-    }
-
-    // Convertir formato largo a corto
-    const matchLargo = clase.match(/(\d)°?\s*(ESO|BACH)?\s*([A-Z])/i);
-    if (matchLargo) {
-      const [, numero, nivel, letra] = matchLargo;
-      const resultado = nivel?.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+    // Formato específico: "1º ESO A" -> "1A", "1º BACH A" -> "1bA"
+    const match = clase.match(/(\d)º\s*(ESO|BACH)\s+([A-Z])/i);
+    if (match) {
+      const [, numero, nivel, letra] = match;
+      const resultado = nivel.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
       console.log('🔍 Resultado formateo:', {
         original: clase,
-        match: matchLargo,
+        match: match,
         resultado: resultado
       });
       return resultado;
@@ -37,8 +29,8 @@ export class TabsNav {
   }
 
   esBachillerato(clase) {
-    // Detectar bachillerato en ambos formatos
-    return clase.toUpperCase().includes('BACH') || /\db[A-Z]/i.test(clase);
+    // Detectar bachillerato
+    return clase.toUpperCase().includes('BACH');
   }
 
   render() {
@@ -74,7 +66,8 @@ export class TabsNav {
                 original: clase,
                 esBach: esBach,
                 formateado: nombreFormateado,
-                esActual: clase === this.claseActual
+                esActual: clase === this.claseActual,
+                color: esBach ? 'var(--bach-color)' : 'var(--primary-color)'
               });
 
               return `
