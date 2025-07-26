@@ -147,11 +147,22 @@ class App {
 
         // TODOS los usuarios van por defecto a "Visitas al WC" (vista clase)
         // Determinar clase inicial (última visitada o primera disponible)
-        const claseInicial = AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass) 
+        const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)) 
           ? AuthService.lastVisitedClass 
           : clases[0];
 
-        await this.navegarA('clase', { clase: claseInicial });
+        console.log('🔍 Navegación inicial:', {
+          lastVisitedClass: AuthService.lastVisitedClass,
+          clases: clases,
+          claseInicial: claseInicial
+        });
+
+        if (claseInicial) {
+          await this.navegarA('clase', { clase: claseInicial });
+        } else {
+          console.error('❌ No se pudo determinar clase inicial');
+          await this.navegarA('carga');
+        }
       } else {
         // Si no hay clases, mostrar el menú de carga
         await this.navegarA('carga');

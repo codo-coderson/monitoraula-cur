@@ -12,15 +12,23 @@ export class MenuView {
 
       // TODOS los usuarios van directamente a "Visitas al WC" (vista clase)
       const clases = DatabaseService.getClases();
-      const clase = AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)
+      const clase = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass))
         ? AuthService.lastVisitedClass 
         : (clases.length > 0 ? clases[0] : null);
       
+      console.log('🔍 MenuView: Determinando clase:', {
+        lastVisitedClass: AuthService.lastVisitedClass,
+        clases: clases,
+        claseSeleccionada: clase
+      });
+      
       if (clase) {
+        console.log('✅ MenuView: Navegando a clase:', clase);
         window.dispatchEvent(new CustomEvent('navegacion', { 
           detail: { vista: 'clase', params: { clase } }
         }));
       } else {
+        console.error('❌ MenuView: No se pudo determinar clase');
         this.mostrarError('No hay clases disponibles. Por favor, carga los datos primero.');
       }
     } catch (error) {
