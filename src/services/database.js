@@ -52,6 +52,7 @@ export const DatabaseService = {
     return cache.clases;
   },
   getAlumnosPorClase(clase) {
+    console.log('🔍 DatabaseService.getAlumnosPorClase():', clase, '→', cache.alumnos[clase] || {});
     return cache.alumnos[clase] || {};
   },
   getRegistrosWC(clase, alumnoId) {
@@ -60,6 +61,46 @@ export const DatabaseService = {
   isLoaded() {
     console.log('🔍 DatabaseService.isLoaded():', cache.loaded);
     return cache.loaded;
+  },
+  
+  // Nuevo método para verificar si realmente hay datos
+  hasRealData() {
+    const hasClases = cache.clases && cache.clases.length > 0;
+    const hasAlumnos = cache.alumnos && Object.keys(cache.alumnos).length > 0;
+    console.log('🔍 DatabaseService.hasRealData():', { 
+      loaded: cache.loaded, 
+      hasClases, 
+      hasAlumnos,
+      totalClases: cache.clases?.length || 0,
+      totalAlumnos: Object.keys(cache.alumnos || {}).length
+    });
+    return cache.loaded && hasClases && hasAlumnos;
+  },
+
+  // Método para esperar hasta que haya datos reales
+  waitForRealData(timeoutMs = 10000) {
+    return new Promise((resolve, reject) => {
+      const startTime = Date.now();
+      
+      const checkData = () => {
+        const elapsed = Date.now() - startTime;
+        console.log(`🔍 Esperando datos reales... ${elapsed}ms`);
+        
+        if (this.hasRealData()) {
+          console.log('✅ Datos reales disponibles');
+          return resolve();
+        }
+        
+        if (elapsed >= timeoutMs) {
+          console.warn('⚠️ Timeout esperando datos reales');
+          return reject(new Error('Timeout esperando datos'));
+        }
+        
+        setTimeout(checkData, 200);
+      };
+      
+      checkData();
+    });
   },
 
   // Escrituras

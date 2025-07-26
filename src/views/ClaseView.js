@@ -24,7 +24,12 @@ export class ClaseView {
       `;
 
       // Esperar a que los datos estén cargados
-      await this.waitForData();
+      console.log('🔄 ClaseView: Esperando datos para clase', clase);
+      try {
+        await DatabaseService.waitForRealData(5000); // 5 segundos para ClaseView
+      } catch (error) {
+        console.warn('⚠️ ClaseView: Timeout esperando datos, continuando...', error);
+      }
 
       // Usar la caché global
       const alumnos = DatabaseService.getAlumnosPorClase(clase);

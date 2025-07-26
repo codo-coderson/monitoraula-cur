@@ -99,17 +99,14 @@ class App {
 
              // La suscripción ya se hizo arriba - eliminar código duplicado
 
-      // Esperar a que la caché esté cargada
-      const waitForCache = () => new Promise(resolve => {
-        if (DatabaseService.isLoaded()) return resolve();
-        const interval = setInterval(() => {
-          if (DatabaseService.isLoaded()) {
-            clearInterval(interval);
-            resolve();
-          }
-        }, 100);
-      });
-      await waitForCache();
+      // Esperar a que haya datos reales disponibles
+      console.log('🔄 Esperando datos reales de Firebase...');
+      try {
+        await DatabaseService.waitForRealData(10000); // 10 segundos máximo
+      } catch (error) {
+        console.error('❌ Error esperando datos reales:', error);
+        // Continuar para mostrar la interfaz aunque no haya datos
+      }
 
       // Cargar clases y renderizar pestañas
       const clases = DatabaseService.getClases();
