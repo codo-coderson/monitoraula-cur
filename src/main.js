@@ -66,21 +66,60 @@ class App {
         // Cargar clases y determinar navegación inicial
         const clases = DatabaseService.getClases();
         if (clases && clases.length > 0) {
-          // Determinar clase inicial (última visitada o primera disponible)
-          const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)) 
-            ? AuthService.lastVisitedClass 
-            : clases[0];
+          // Asegurar que el contenedor de pestañas esté visible y configurado
+          const tabsContainer = document.getElementById('tabs-nav');
+          if (tabsContainer) {
+            console.log('🔄 Inicializando pestañas post-login...');
+            tabsContainer.style.display = 'block';
+            
+            // Crear nueva instancia de TabsNav si no existe
+            if (!this.tabsNav) {
+              this.tabsNav = new TabsNav(
+                tabsContainer,
+                clases,
+                clases[0],
+                (clase) => this.navegarA('clase', { clase })
+              );
+            } else {
+              // Actualizar clases en TabsNav existente
+              this.tabsNav.clases = clases;
+            }
+            
+            // Determinar clase inicial
+            const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)) 
+              ? AuthService.lastVisitedClass 
+              : clases[0];
 
-          console.log('🔍 Navegación post-login:', {
-            lastVisitedClass: AuthService.lastVisitedClass,
-            clases: clases,
-            claseInicial: claseInicial
-          });
+            // Actualizar clase actual en TabsNav
+            this.tabsNav.claseActual = claseInicial;
+            this.tabsNav.render();
 
-          if (claseInicial) {
-            await this.navegarA('clase', { clase: claseInicial });
+            console.log('🔍 Navegación post-login:', {
+              lastVisitedClass: AuthService.lastVisitedClass,
+              clases: clases,
+              claseInicial: claseInicial,
+              tabsContainerVisible: tabsContainer.style.display,
+              tabsNavExists: !!this.tabsNav
+            });
+
+            // Verificar que las pestañas se renderizaron
+            setTimeout(() => {
+              const tabElements = tabsContainer.querySelectorAll('.tab');
+              console.log('🔍 Verificación pestañas post-login:', {
+                numTabs: tabElements.length,
+                containerVisible: tabsContainer.style.display,
+                innerHTML: tabsContainer.innerHTML.length
+              });
+            }, 100);
+
+            if (claseInicial) {
+              await this.navegarA('clase', { clase: claseInicial });
+            } else {
+              console.error('❌ No se pudo determinar clase inicial');
+              await this.navegarA('carga');
+            }
           } else {
-            console.error('❌ No se pudo determinar clase inicial');
+            console.error('❌ No se encontró el contenedor de pestañas');
             await this.navegarA('carga');
           }
         } else {
