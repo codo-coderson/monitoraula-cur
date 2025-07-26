@@ -64,17 +64,10 @@ class App {
       this.header.render();
       console.log('✅ Header renderizado');
 
-      // Inicializar autenticación
-      await AuthService.init();
-      
-      // Si no hay usuario autenticado, mostrar login
-      if (!AuthService.isAuthenticated()) {
-        await this.navegarA('login');
-        return;
-      }
-
-      // Suscribirse globalmente a la base de datos
+      // Suscribirse globalmente a la base de datos ANTES de la autenticación
+      console.log('🔄 Iniciando suscripción a base de datos...');
       DatabaseService.subscribeAll(() => {
+        console.log('🔄 Base de datos actualizada - refrescando vistas');
         // Cuando se actualiza la BD, refrescar la vista actual
         if (this.currentView && typeof this.currentView.render === 'function') {
           if (this.currentView === this.views.clase) {
@@ -90,6 +83,17 @@ class App {
           this.tabsNav.render();
         }
       });
+
+      // Inicializar autenticación
+      await AuthService.init();
+      
+      // Si no hay usuario autenticado, mostrar login
+      if (!AuthService.isAuthenticated()) {
+        await this.navegarA('login');
+        return;
+      }
+
+             // La suscripción ya se hizo arriba - eliminar código duplicado
 
       // Esperar a que la caché esté cargada
       const waitForCache = () => new Promise(resolve => {
