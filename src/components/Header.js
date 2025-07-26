@@ -1,5 +1,6 @@
 import { DateUtils } from '../utils/date.js';
 import { AuthService } from '../services/auth.js';
+import { RolesService } from '../services/roles.js';
 
 export class Header {
   constructor(container) {
@@ -10,7 +11,14 @@ export class Header {
   render() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
-    const isAdmin = AuthService.isAdmin;
+    const isAdmin = user ? RolesService.isAdmin(user.email) : false;
+    
+    console.log('🔍 Header Debug:', { 
+      user: user?.email, 
+      userIdentifier, 
+      isAdmin,
+      adminEmails: ['salvador.fernandez@salesianas.org', 'codocoderson@gmail.com']
+    });
 
     this.container.innerHTML = `
       <div style="
