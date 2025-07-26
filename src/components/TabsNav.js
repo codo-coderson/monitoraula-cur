@@ -6,6 +6,20 @@ export class TabsNav {
     this.onClaseChange = onClaseChange;
   }
 
+  formatearClase(clase) {
+    // Convertir "1°ESO A" a "1A" y "1°BACH A" a "1bA"
+    const match = clase.match(/(\d)°(ESO|BACH)\s+([A-Z])/i);
+    if (match) {
+      const [, numero, nivel, letra] = match;
+      return nivel.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+    }
+    return clase;
+  }
+
+  esBachillerato(clase) {
+    return clase.toUpperCase().includes('BACH');
+  }
+
   render() {
     this.container.innerHTML = `
       <div class="tabs-container" style="
@@ -26,35 +40,41 @@ export class TabsNav {
             display: inline-flex;
             padding: 0 1rem;
           ">
-            ${this.clases.map(clase => `
-              <button 
-                class="tab-btn ${clase === this.claseActual ? 'active' : ''}"
-                data-clase="${clase}"
-                style="
-                  padding: 1rem 1.5rem;
-                  border: none;
-                  background: none;
-                  color: ${clase === this.claseActual ? '#0044cc' : '#666'};
-                  font-size: 1rem;
-                  cursor: pointer;
-                  position: relative;
-                  transition: all 0.2s;
-                  font-weight: ${clase === this.claseActual ? '600' : '400'};
-                "
-              >
-                ${clase}
-                ${clase === this.claseActual ? `
-                  <div style="
-                    position: absolute;
-                    bottom: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 2px;
-                    background: #0044cc;
-                  "></div>
-                ` : ''}
-              </button>
-            `).join('')}
+            ${this.clases.map(clase => {
+              const esBach = this.esBachillerato(clase);
+              const nombreFormateado = this.formatearClase(clase);
+              return `
+                <button 
+                  class="tab-btn ${clase === this.claseActual ? 'active' : ''}"
+                  data-clase="${clase}"
+                  style="
+                    padding: 0.75rem 1.25rem;
+                    border: none;
+                    background: none;
+                    color: ${clase === this.claseActual 
+                      ? (esBach ? 'var(--bach-color)' : 'var(--primary-color)') 
+                      : (esBach ? '#4a5568' : '#666')};
+                    font-size: var(--font-size-base);
+                    cursor: pointer;
+                    position: relative;
+                    transition: all 0.2s;
+                    font-weight: ${clase === this.claseActual ? '600' : '400'};
+                  "
+                >
+                  ${nombreFormateado}
+                  ${clase === this.claseActual ? `
+                    <div style="
+                      position: absolute;
+                      bottom: 0;
+                      left: 0;
+                      width: 100%;
+                      height: 2px;
+                      background: ${esBach ? 'var(--bach-color)' : 'var(--primary-color)'};
+                    "></div>
+                  ` : ''}
+                </button>
+              `;
+            }).join('')}
           </div>
         </div>
       </div>

@@ -12,6 +12,10 @@
   --gray-700: #495057;
   --gray-800: #343a40;
   --gray-900: #212529;
+  --bach-color: #2c5282; /* Color para bachillerato */
+  --font-size-base: 0.875rem; /* 14px */
+  --font-size-sm: 0.75rem;   /* 12px */
+  --font-size-lg: 1rem;      /* 16px */
 }
 
 * {
@@ -31,18 +35,19 @@ body {
   line-height: 1.5;
   color: var(--gray-900);
   background-color: var(--gray-100);
-  padding-top: 4rem; /* Espacio para el header fijo */
+  padding-top: 3.5rem; /* Reducido de 4rem */
   min-height: 100vh;
   position: relative;
+  font-size: var(--font-size-base);
 }
 
 /* Contenedor principal */
 #app {
-  min-height: calc(100vh - 4rem);
+  min-height: calc(100vh - 3.5rem);
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   position: relative;
   z-index: 1;
 }
@@ -53,13 +58,13 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  height: 4rem;
+  height: 3.5rem;
   background: white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 2rem;
+  padding: 0 1.5rem;
   z-index: 100;
 }
 
@@ -82,7 +87,7 @@ body {
 /* Botones */
 button {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -103,9 +108,9 @@ button:disabled {
   width: 100%;
   max-width: 600px;
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0.875rem;
   border-radius: 8px;
-  font-size: 1.1rem;
+  font-size: var(--font-size-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -116,7 +121,7 @@ button:disabled {
 /* Formularios */
 input, select {
   font-family: inherit;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   padding: 0.5rem;
   border: 1px solid var(--gray-300);
   border-radius: 4px;
