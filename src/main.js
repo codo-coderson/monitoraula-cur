@@ -48,6 +48,46 @@ class App {
         this.navegarA(vista, params);
       });
 
+      // Escuchar eventos de login exitoso
+      window.addEventListener('user-logged-in', async () => {
+        console.log('🔄 Usuario logueado - iniciando navegación...');
+        
+        // Refrescar header para mostrar el usuario correcto
+        this.header.refresh();
+
+        // Esperar a que haya datos reales disponibles
+        console.log('🔄 Esperando datos reales de Firebase...');
+        try {
+          await DatabaseService.waitForRealData(10000); // 10 segundos máximo
+        } catch (error) {
+          console.error('❌ Error esperando datos reales:', error);
+        }
+
+        // Cargar clases y determinar navegación inicial
+        const clases = DatabaseService.getClases();
+        if (clases && clases.length > 0) {
+          // Determinar clase inicial (última visitada o primera disponible)
+          const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)) 
+            ? AuthService.lastVisitedClass 
+            : clases[0];
+
+          console.log('🔍 Navegación post-login:', {
+            lastVisitedClass: AuthService.lastVisitedClass,
+            clases: clases,
+            claseInicial: claseInicial
+          });
+
+          if (claseInicial) {
+            await this.navegarA('clase', { clase: claseInicial });
+          } else {
+            console.error('❌ No se pudo determinar clase inicial');
+            await this.navegarA('carga');
+          }
+        } else {
+          await this.navegarA('carga');
+        }
+      });
+
       // Iniciar la aplicación
       this.iniciar();
     } catch (error) {
