@@ -6,9 +6,20 @@ export class Header {
   constructor(container) {
     this.container = container;
     this.updateInterval = null;
+    
+    // Escuchar evento de login exitoso para refrescar el header
+    window.addEventListener('user-logged-in', () => {
+      console.log('🔄 Usuario logueado - refrescando header...');
+      setTimeout(() => this.refresh(), 100); // Pequeño delay para que AuthService se actualice
+    });
   }
 
   render() {
+    this.renderHeader();
+    this.startUpdating();
+  }
+
+  renderHeader() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
     const isAdmin = user ? RolesService.isAdmin(user.email) : false;
@@ -17,7 +28,8 @@ export class Header {
       user: user?.email, 
       userIdentifier, 
       isAdmin,
-      adminEmails: ['salvador.fernandez@salesianas.org', 'codocoderson@gmail.com']
+      adminEmails: ['salvador.fernandez@salesianas.org', 'codocoderson@gmail.com'],
+      authServiceCurrentUser: AuthService.currentUser?.email
     });
 
     this.container.innerHTML = `
@@ -129,12 +141,22 @@ export class Header {
     `;
 
     this.setupMenuEvents();
-    this.startUpdating();
+  }
+
+  // Método para refrescar el header después del login
+  refresh() {
+    console.log('🔄 Refrescando header...');
+    this.renderHeader();
   }
 
   setupMenuEvents() {
     const menuBtn = document.getElementById('userMenuBtn');
     const menu = document.getElementById('userMenu');
+
+    if (!menuBtn || !menu) {
+      console.warn('⚠️ No se encontraron elementos del menú de usuario');
+      return;
+    }
 
     // Toggle menú
     menuBtn.onclick = (e) => {

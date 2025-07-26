@@ -93,6 +93,10 @@ class App {
         return;
       }
 
+      // Refrescar header después del login para mostrar el usuario correcto
+      console.log('🔄 Refrescando header tras autenticación...');
+      this.header.refresh();
+
              // La suscripción ya se hizo arriba - eliminar código duplicado
 
       // Esperar a que la caché esté cargada
