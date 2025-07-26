@@ -7,6 +7,11 @@ export class TabsNav {
   }
 
   formatearClase(clase) {
+    console.log('🔍 Formateando clase:', {
+      original: clase,
+      esBach: this.esBachillerato(clase)
+    });
+
     // Si ya está en formato corto (1A, 2B, etc.), verificar si es bachillerato
     if (/^\d[A-Z]$/.test(clase)) {
       return clase;
@@ -19,7 +24,13 @@ export class TabsNav {
     const matchLargo = clase.match(/(\d)°?\s*(ESO|BACH)?\s*([A-Z])/i);
     if (matchLargo) {
       const [, numero, nivel, letra] = matchLargo;
-      return nivel?.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+      const resultado = nivel?.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+      console.log('🔍 Resultado formateo:', {
+        original: clase,
+        match: matchLargo,
+        resultado: resultado
+      });
+      return resultado;
     }
 
     return clase;
@@ -31,6 +42,11 @@ export class TabsNav {
   }
 
   render() {
+    console.log('🔍 Renderizando pestañas:', {
+      clases: this.clases,
+      claseActual: this.claseActual
+    });
+
     this.container.innerHTML = `
       <div class="tabs-container" style="
         width: 100%;
@@ -53,6 +69,14 @@ export class TabsNav {
             ${this.clases.map(clase => {
               const esBach = this.esBachillerato(clase);
               const nombreFormateado = this.formatearClase(clase);
+              
+              console.log('🔍 Procesando pestaña:', {
+                original: clase,
+                esBach: esBach,
+                formateado: nombreFormateado,
+                esActual: clase === this.claseActual
+              });
+
               return `
                 <button 
                   class="tab-btn ${clase === this.claseActual ? 'active' : ''}"
