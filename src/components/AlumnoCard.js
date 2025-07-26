@@ -28,22 +28,23 @@ export class AlumnoCard {
           margin-bottom: 0.5rem;
         ">
           <div style="font-weight: bold;">${this.nombre}</div>
-          ${AuthService.isAdmin() ? `
-            <button
-              onclick="window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'informe', params: { clase: '${this.clase}', alumnoId: '${this.alumnoId}', nombre: '${this.nombre}' } } }))"
-              style="
-                padding: 0.25rem 0.5rem;
-                background: none;
-                border: 1px solid var(--primary-color);
-                color: var(--primary-color);
-                border-radius: 4px;
-                font-size: var(--font-size-sm);
-                cursor: pointer;
-                transition: all 0.2s;
-              "
-              title="Ver informe de salidas"
-            >📊 Informe</button>
-          ` : ''}
+          <button
+            onclick="window.dispatchEvent(new CustomEvent('navegacion', {detail: {vista: 'informe', params: {clase: '${this.clase}', alumnoId: '${this.alumnoId}'}}}))"
+            style="
+              padding: 0.25rem 0.5rem;
+              background: none;
+              border: 1px solid var(--primary-color);
+              color: var(--primary-color);
+              border-radius: 4px;
+              cursor: pointer;
+              font-size: var(--font-size-sm);
+              display: flex;
+              align-items: center;
+              gap: 0.25rem;
+            "
+          >
+            📊 Ver informe
+          </button>
         </div>
         <div id="botones-${this.alumnoId}" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
         <div id="media-${this.alumnoId}" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
@@ -70,13 +71,19 @@ export class AlumnoCard {
     const mediaElement = document.getElementById(`media-${this.alumnoId}`);
     if (mediaElement) {
       const media = DateUtils.calcularMediaSalidas(registros);
+      const mediaColor = media >= 5 ? '#ff0000' : 
+                        media >= 4 ? '#cc0000' :
+                        media >= 3 ? '#cc6600' :
+                        media >= 2 ? '#000000' : '#666666';
+      const mediaStyle = media >= 2 ? 'font-weight: bold;' : '';
+      
       mediaElement.innerHTML = `
         <div style="
           font-size: var(--font-size-sm);
           color: var(--gray-600);
           margin-top: 0.25rem;
         ">
-          ${media.toFixed(2)} salidas/día en los últimos 30 días
+          <span style="${mediaStyle} color: ${mediaColor};">${media.toFixed(2)}</span> salidas/día en los últimos 30 días
         </div>
       `;
     }
