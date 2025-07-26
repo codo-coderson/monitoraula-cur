@@ -7,17 +7,27 @@ export class TabsNav {
   }
 
   formatearClase(clase) {
-    // Convertir "1°ESO A" a "1A" y "1°BACH A" a "1bA"
-    const match = clase.match(/(\d)°(ESO|BACH)\s+([A-Z])/i);
-    if (match) {
-      const [, numero, nivel, letra] = match;
-      return nivel.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+    // Si ya está en formato corto (1A, 2B, etc.), verificar si es bachillerato
+    if (/^\d[A-Z]$/.test(clase)) {
+      return clase;
     }
+    if (/^\d[bB][A-Z]$/.test(clase)) {
+      return clase.charAt(0) + 'b' + clase.charAt(2);
+    }
+
+    // Convertir formato largo a corto
+    const matchLargo = clase.match(/(\d)°?\s*(ESO|BACH)?\s*([A-Z])/i);
+    if (matchLargo) {
+      const [, numero, nivel, letra] = matchLargo;
+      return nivel?.toUpperCase() === 'BACH' ? `${numero}b${letra}` : `${numero}${letra}`;
+    }
+
     return clase;
   }
 
   esBachillerato(clase) {
-    return clase.toUpperCase().includes('BACH');
+    // Detectar bachillerato en ambos formatos
+    return clase.toUpperCase().includes('BACH') || /\db[A-Z]/i.test(clase);
   }
 
   render() {
