@@ -21,7 +21,30 @@ export class AlumnoCard {
         background-color: #fff;
         box-shadow: 0 2px 4px rgba(0,0,0,0.05);
       ">
-        <div style="font-weight: bold; margin-bottom: 0.5rem;">${this.nombre}</div>
+        <div style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 0.5rem;
+        ">
+          <div style="font-weight: bold;">${this.nombre}</div>
+          ${AuthService.isAdmin() ? `
+            <button
+              onclick="window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'informe', params: { clase: '${this.clase}', alumnoId: '${this.alumnoId}', nombre: '${this.nombre}' } } }))"
+              style="
+                padding: 0.25rem 0.5rem;
+                background: none;
+                border: 1px solid var(--primary-color);
+                color: var(--primary-color);
+                border-radius: 4px;
+                font-size: var(--font-size-sm);
+                cursor: pointer;
+                transition: all 0.2s;
+              "
+              title="Ver informe de salidas"
+            >📊 Informe</button>
+          ` : ''}
+        </div>
         <div id="botones-${this.alumnoId}" style="display: flex; flex-wrap: wrap; gap: 0.5rem;"></div>
         <div id="media-${this.alumnoId}" style="margin-top: 0.5rem; font-size: 0.9rem;"></div>
         <div id="aviso-${this.alumnoId}" style="color: #dc3545; font-size: 0.9rem; margin-top: 0.5rem; display: none;"></div>

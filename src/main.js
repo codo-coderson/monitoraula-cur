@@ -5,6 +5,7 @@ import { MenuView } from './views/MenuView.js';
 import { ClaseView } from './views/ClaseView.js';
 import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
+import { InformeAlumnoView } from './views/InformeAlumnoView.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
 import { FontSizeService } from './utils/fontsize.js';
@@ -51,7 +52,8 @@ class App {
         login: new LoginView(this.mainContainer),
         menu: new MenuView(this.mainContainer),
         clase: new ClaseView(this.mainContainer),
-        carga: new CargaAlumnosView(this.mainContainer)
+        carga: new CargaAlumnosView(this.mainContainer),
+        informe: new InformeAlumnoView(this.mainContainer)
       };
       console.log('✅ Vistas inicializadas');
 
@@ -331,6 +333,8 @@ class App {
 
       if (vista === 'clase') {
         await this.currentView.render(params.clase);
+      } else if (vista === 'informe') {
+        await this.currentView.render(params.clase, params.alumnoId, params.nombre);
       } else {
         await this.currentView.render();
       }
