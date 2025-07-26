@@ -115,8 +115,13 @@ class App {
         this.tabsNav.render();
         console.log('✅ Pestañas renderizadas');
 
-        // Iniciar en la primera clase
-        await this.navegarA('clase', { clase: clases[0] });
+        // TODOS los usuarios van por defecto a "Visitas al WC" (vista clase)
+        // Determinar clase inicial (última visitada o primera disponible)
+        const claseInicial = AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass) 
+          ? AuthService.lastVisitedClass 
+          : clases[0];
+
+        await this.navegarA('clase', { clase: claseInicial });
       } else {
         // Si no hay clases, mostrar el menú de carga
         await this.navegarA('carga');
