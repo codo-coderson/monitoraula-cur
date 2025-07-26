@@ -8,9 +8,7 @@ import {
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { RolesService } from './roles.js';
-import app from '../config/firebase';
-
-const auth = getAuth(app);
+import { auth } from '../config/firebase';
 
 // Configurar persistencia local (equivalente a una cookie)
 setPersistence(auth, browserLocalPersistence);
