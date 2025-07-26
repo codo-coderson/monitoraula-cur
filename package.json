@@ -1,0 +1,19 @@
+{
+  "name": "monitoraula",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm install && vite build",
+    "preview": "vite preview",
+    "init-db": "node scripts/init-db.js"
+  },
+  "dependencies": {
+    "firebase": "^10.8.1",
+    "papaparse": "^5.4.1",
+    "xlsx": "^0.18.5",
+    "dotenv": "^16.4.5",
+    "vite": "^5.1.4"
+  }
+}
