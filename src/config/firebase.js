@@ -1,4 +1,5 @@
 import { initializeApp } from 'firebase/app';
+import { getAuth, setPersistence, browserLocalPersistence } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 
 const firebaseConfig = {
@@ -11,7 +12,20 @@ const firebaseConfig = {
   databaseURL: `https://${import.meta.env.VITE_FIREBASE_PROJECT_ID}-default-rtdb.europe-west1.firebasedatabase.app`
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+console.log('🔍 Firebase Config:', {
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  databaseURL: firebaseConfig.databaseURL,
+  hasApiKey: !!import.meta.env.VITE_FIREBASE_API_KEY
+});
 
-export default app;
+// Inicializar Firebase
+const app = initializeApp(firebaseConfig);
+
+// Configurar autenticación con persistencia local
+const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence);
+
+// Configurar Realtime Database
+const db = getDatabase(app);
+
+export { auth, db };

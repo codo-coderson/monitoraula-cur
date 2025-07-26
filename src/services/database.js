@@ -15,14 +15,29 @@ export const DatabaseService = {
   // Suscripción global a toda la base de datos relevante
   subscribeAll(onUpdate) {
     if (unsubscribe) unsubscribe();
+    console.log('🔍 DatabaseService: Iniciando suscripción global...');
+    
     const mainRef = ref(db);
     unsubscribe = onValue(mainRef, (snapshot) => {
+      console.log('🔍 DatabaseService: Datos recibidos de Firebase');
       const data = snapshot.val() || {};
+      console.log('🔍 DatabaseService: Datos completos:', data);
+      
       cache.clases = data.clases || [];
       cache.alumnos = data.alumnos || {};
       cache.registros = data.registros || {};
       cache.loaded = true;
+      
+      console.log('🔍 DatabaseService: Caché actualizado:', {
+        clases: cache.clases,
+        numAlumnos: Object.keys(cache.alumnos).length,
+        numRegistros: Object.keys(cache.registros).length,
+        loaded: cache.loaded
+      });
+      
       if (onUpdate) onUpdate();
+    }, (error) => {
+      console.error('❌ DatabaseService: Error en suscripción:', error);
     });
   },
 
@@ -33,6 +48,7 @@ export const DatabaseService = {
 
   // Métodos para obtener datos de la caché
   getClases() {
+    console.log('🔍 DatabaseService.getClases() retornando:', cache.clases);
     return cache.clases;
   },
   getAlumnosPorClase(clase) {
@@ -42,6 +58,7 @@ export const DatabaseService = {
     return (cache.registros[clase] && cache.registros[clase][alumnoId]) || {};
   },
   isLoaded() {
+    console.log('🔍 DatabaseService.isLoaded():', cache.loaded);
     return cache.loaded;
   },
 
