@@ -6,7 +6,6 @@ export class GestionUsuariosView {
   }
 
   render() {
-    UserService.subscribeAll(() => this.render());
     const usuarios = UserService.getUsers();
     const filas = Object.values(usuarios).map(u => `
       <tr>

@@ -55,6 +55,10 @@ Aplicación web para gestionar y monitorear las visitas al WC de los alumnos.
    ```bash
    npm run dev
    ```
+5. (Opcional) Inicializa la base de datos con datos de ejemplo:
+   ```bash
+   npm run init-db
+   ```
 
 ## Estructura del Proyecto
 
