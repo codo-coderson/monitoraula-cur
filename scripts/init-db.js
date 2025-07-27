@@ -40,6 +40,11 @@ const datosIniciales = {
         nombre: 'María Rodríguez'
       }
     }
+  },
+  usuarios: {
+    "<uid1>": { email: "codocoderson@gmail.com", role: "admin" },
+    "<uid2>": { email: "salvador.fernandez@gmail.com", role: "admin" },
+    "<uid3>": { email: "silvia.martinez@salesianas.org", role: "profesor" }
   }
 };
 
@@ -48,11 +53,14 @@ async function inicializarDB() {
   try {
     // Guardar clases
     await set(ref(db, 'clases'), datosIniciales.clases);
-    
+
     // Guardar alumnos
     for (const [clase, alumnos] of Object.entries(datosIniciales.alumnos)) {
       await set(ref(db, `alumnos/${clase}`), alumnos);
     }
+
+    // Guardar usuarios iniciales
+    await set(ref(db, 'usuarios'), datosIniciales.usuarios);
     
     console.log('Base de datos inicializada correctamente');
     process.exit(0);
