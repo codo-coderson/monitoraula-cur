@@ -24,11 +24,10 @@ export class Header {
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
     const isAdmin = user ? RolesService.isAdmin(user.email) : false;
     
-    console.log('🔍 Header Debug:', { 
-      user: user?.email, 
-      userIdentifier, 
+    console.log('🔍 Header Debug:', {
+      user: user?.email,
+      userIdentifier,
       isAdmin,
-      adminEmails: ['salvador.fernandez@salesianas.org', 'codocoderson@gmail.com'],
       authServiceCurrentUser: AuthService.currentUser?.email
     });
 
@@ -100,6 +99,12 @@ export class Header {
                 border-bottom: 1px solid #eee;
                 transition: background 0.2s;
               ">📁 Carga de Alumnos</div>
+              <div class="menu-item" data-action="gestionUsuarios" style="
+                padding: 0.7rem 1rem;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                transition: background 0.2s;
+              ">👥 Gestión de Usuarios</div>
               <div class="menu-item" data-action="borrarBD" style="
                 padding: 0.7rem 1rem;
                 cursor: pointer;
@@ -180,13 +185,19 @@ export class Header {
               alert('No hay clases disponibles');
             }
             break;
-          
+
           case 'cargaAlumnos':
-            window.dispatchEvent(new CustomEvent('navegacion', { 
+            window.dispatchEvent(new CustomEvent('navegacion', {
               detail: { vista: 'carga' }
             }));
             break;
-          
+
+          case 'gestionUsuarios':
+            window.dispatchEvent(new CustomEvent('navegacion', {
+              detail: { vista: 'usuarios' }
+            }));
+            break;
+
           case 'borrarBD':
             if (confirm('⚠️ ATENCIÓN: Esto BORRARÁ TODA la base de datos. ¿Está seguro?')) {
               if (confirm('Esta acción NO se puede deshacer. ¿Confirma que desea borrar TODOS los datos?')) {

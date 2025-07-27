@@ -1,14 +1,15 @@
 import { ref, get, set } from 'firebase/database';
 import { db } from '../config/firebase';
-
-const ADMIN_EMAILS = [
-  'salvador.fernandez@salesianas.org',
-  'codocoderson@gmail.com'
-];
+import { UserService } from './users.js';
 
 export const RolesService = {
   isAdmin(email) {
-    return ADMIN_EMAILS.includes(email);
+    const user = UserService.getUserByEmail(email);
+    return user?.role === 'admin';
+  },
+
+  getRole(email) {
+    return UserService.getUserByEmail(email)?.role || null;
   },
 
   async getLastVisitedClass(email) {
@@ -33,4 +34,4 @@ export const RolesService = {
       console.error('Error al guardar la última clase visitada:', error);
     }
   }
-}; 
+};

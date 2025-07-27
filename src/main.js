@@ -6,8 +6,10 @@ import { ClaseView } from './views/ClaseView.js';
 import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
 import { InformeView } from './views/InformeView.js';
+import { GestionUsuariosView } from './views/GestionUsuariosView.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
+import { UserService } from './services/users.js';
 import { FontSizeService } from './utils/fontsize.js';
 import { CleanupService } from './services/cleanup.js';
 
@@ -53,6 +55,7 @@ class App {
         menu: new MenuView(this.mainContainer),
         clase: new ClaseView(this.mainContainer),
         carga: new CargaAlumnosView(this.mainContainer),
+        usuarios: new GestionUsuariosView(this.mainContainer),
         informe: new InformeView(this.mainContainer)
       };
       console.log('✅ Vistas inicializadas');
@@ -176,6 +179,13 @@ class App {
         if (this.tabsNav) {
           this.tabsNav.clases = DatabaseService.getClases();
           this.tabsNav.render();
+        }
+      });
+
+      // Suscribirse a la lista de usuarios
+      await UserService.subscribeAll(() => {
+        if (this.currentView === this.views.usuarios) {
+          this.currentView.render();
         }
       });
 
