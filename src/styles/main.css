@@ -2,6 +2,7 @@
 :root {
   --primary-color: #0044cc;
   --primary-dark: #003399;
+  --success-color: #198754;
   --danger-color: #dc3545;
   --gray-100: #f8f9fa;
   --gray-200: #e9ecef;
@@ -16,6 +17,7 @@
   --font-size-base: 0.875rem; /* 14px */
   --font-size-sm: 0.75rem;   /* 12px */
   --font-size-lg: 1rem;      /* 16px */
+  --font-size-xl: 1.25rem;   /* 20px */
 }
 
 * {

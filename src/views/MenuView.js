@@ -1,5 +1,6 @@
 import { DatabaseService } from '../services/database.js';
 import { AuthService } from '../services/auth.js';
+import { RolesService } from '../services/roles.js';
 
 export class MenuView {
   constructor(container) {
@@ -8,9 +9,28 @@ export class MenuView {
 
   async render() {
     try {
-      console.log('🔄 MenuView: Redirigiendo todos los usuarios a Visitas al WC...');
+      console.log('🔄 MenuView: Redirigiendo usuarios autorizados a Visitas al WC...');
 
-      // TODOS los usuarios van directamente a "Visitas al WC" (vista clase)
+      // Verificar permisos del usuario
+      const user = AuthService.getCurrentUser();
+      const isAdmin = user ? RolesService.isAdmin(user.email) : false;
+      const isTeacher = user ? RolesService.isTeacher(user.email) : false;
+
+      console.log('🔍 MenuView: Permisos del usuario:', { 
+        email: user?.email, 
+        isAdmin, 
+        isTeacher,
+        canViewVisits: isAdmin || isTeacher
+      });
+
+      // Solo usuarios con permisos (administradores o profesores) pueden ver las visitas
+      if (!isAdmin && !isTeacher) {
+        console.warn('⚠️ Usuario sin permisos intentando acceder al menú');
+        this.mostrarError('No tienes permisos para acceder a esta sección');
+        return;
+      }
+
+      // TODOS los usuarios autorizados van directamente a "Visitas al WC" (vista clase)
       const clases = DatabaseService.getClases();
       const clase = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass))
         ? AuthService.lastVisitedClass 

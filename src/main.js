@@ -6,14 +6,20 @@ import { ClaseView } from './views/ClaseView.js';
 import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
 import { InformeView } from './views/InformeView.js';
+import { UserManagementView } from './views/UserManagementView.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
+import { RolesService } from './services/roles.js';
+import { UserManagementService } from './services/userManagement.js';
 import { FontSizeService } from './utils/fontsize.js';
 import { CleanupService } from './services/cleanup.js';
 
 class App {
   constructor() {
     console.log('🚀 Iniciando aplicación...');
+    
+    // Hacer disponible el servicio de gestión de usuarios globalmente
+    window.UserManagementService = UserManagementService;
     
     // Inicializar tamaño de fuente
     FontSizeService.init();
@@ -53,7 +59,8 @@ class App {
         menu: new MenuView(this.mainContainer),
         clase: new ClaseView(this.mainContainer),
         carga: new CargaAlumnosView(this.mainContainer),
-        informe: new InformeView(this.mainContainer)
+        informe: new InformeView(this.mainContainer),
+        userManagement: new UserManagementView(this.mainContainer)
       };
       console.log('✅ Vistas inicializadas');
 
@@ -301,6 +308,29 @@ class App {
       if (!AuthService.isAuthenticated() && vista !== 'login') {
         vista = 'login';
         params = {};
+      }
+
+      // Verificar permisos para vistas restringidas
+      if (AuthService.isAuthenticated()) {
+        const user = AuthService.getCurrentUser();
+        const isAdmin = RolesService.isAdmin(user.email);
+        const isTeacher = RolesService.isTeacher(user.email);
+
+        // Solo administradores pueden acceder a estas vistas
+        if (['carga', 'userManagement'].includes(vista) && !isAdmin) {
+          console.warn('⚠️ Acceso denegado a vista:', vista);
+          // Redirigir a visitas al WC
+          vista = 'clase';
+          const clases = DatabaseService.getClases();
+          params = { clase: clases && clases.length > 0 ? clases[0] : null };
+        }
+
+        // Tanto administradores como profesores pueden ver visitas al WC
+        if (vista === 'clase' && !(isAdmin || isTeacher)) {
+          console.warn('⚠️ Acceso denegado a visitas al WC');
+          vista = 'login';
+          params = {};
+        }
       }
       
       // Mostrar/ocultar elementos según la vista

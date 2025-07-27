@@ -1,6 +1,7 @@
 import { ref, get, set } from 'firebase/database';
 import { db } from '../config/firebase';
 
+// Lista estática de administradores (fallback)
 const ADMIN_EMAILS = [
   'salvador.fernandez@salesianas.org',
   'codocoderson@gmail.com'
@@ -8,7 +9,39 @@ const ADMIN_EMAILS = [
 
 export const RolesService = {
   isAdmin(email) {
+    // Primero verificar en el sistema de gestión de usuarios
+    if (typeof window !== 'undefined' && window.UserManagementService) {
+      const role = window.UserManagementService.getUserRole(email);
+      if (role === 'admin') {
+        return true;
+      }
+      if (role === 'teacher') {
+        return false;
+      }
+    }
+    
+    // Fallback a la lista estática para compatibilidad
     return ADMIN_EMAILS.includes(email);
+  },
+
+  isTeacher(email) {
+    // Verificar en el sistema de gestión de usuarios
+    if (typeof window !== 'undefined' && window.UserManagementService) {
+      const role = window.UserManagementService.getUserRole(email);
+      return role === 'teacher';
+    }
+    
+    return false;
+  },
+
+  // Método para compatibilidad - verificar si tiene permisos para ver todo
+  hasFullAccess(email) {
+    return this.isAdmin(email);
+  },
+
+  // Método para verificar si puede ver solo visitas al WC
+  canViewVisits(email) {
+    return this.isAdmin(email) || this.isTeacher(email);
   },
 
   async getLastVisitedClass(email) {

@@ -25,6 +25,15 @@ export const AuthService = {
       onAuthStateChanged(auth, async (user) => {
         this.currentUser = user;
         if (user) {
+          // Inicializar servicio de gestión de usuarios si está disponible
+          if (window.UserManagementService) {
+            try {
+              await window.UserManagementService.init();
+            } catch (error) {
+              console.error('❌ Error al inicializar gestión de usuarios:', error);
+            }
+          }
+          
           this.isAdmin = RolesService.isAdmin(user.email);
           this.lastVisitedClass = await RolesService.getLastVisitedClass(user.email);
         } else {

@@ -23,6 +23,7 @@ export class Header {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
     const isAdmin = user ? RolesService.isAdmin(user.email) : false;
+    const isTeacher = user ? RolesService.isTeacher(user.email) : false;
     
     console.log('🔍 Header Debug:', { 
       user: user?.email, 
@@ -87,19 +88,27 @@ export class Header {
             z-index: 1000;
             margin-top: 2px;
           ">
-            ${isAdmin ? `
+            ${(isAdmin || isTeacher) ? `
               <div class="menu-item" data-action="visitasWC" style="
                 padding: 0.7rem 1rem;
                 cursor: pointer;
                 border-bottom: 1px solid #eee;
                 transition: background 0.2s;
               ">📊 Visitas al WC</div>
+            ` : ''}
+            ${isAdmin ? `
               <div class="menu-item" data-action="cargaAlumnos" style="
                 padding: 0.7rem 1rem;
                 cursor: pointer;
                 border-bottom: 1px solid #eee;
                 transition: background 0.2s;
               ">📁 Carga de Alumnos</div>
+              <div class="menu-item" data-action="userManagement" style="
+                padding: 0.7rem 1rem;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                transition: background 0.2s;
+              ">👥 Gestión de Usuarios</div>
               <div class="menu-item" data-action="borrarBD" style="
                 padding: 0.7rem 1rem;
                 cursor: pointer;
@@ -184,6 +193,12 @@ export class Header {
           case 'cargaAlumnos':
             window.dispatchEvent(new CustomEvent('navegacion', { 
               detail: { vista: 'carga' }
+            }));
+            break;
+          
+          case 'userManagement':
+            window.dispatchEvent(new CustomEvent('navegacion', { 
+              detail: { vista: 'userManagement' }
             }));
             break;
           
