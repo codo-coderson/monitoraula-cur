@@ -42,9 +42,22 @@ const datosIniciales = {
     }
   },
   usuarios: {
-    "<uid1>": { email: "codocoderson@gmail.com", role: "admin" },
-    "<uid2>": { email: "salvador.fernandez@gmail.com", role: "admin" },
-    "<uid3>": { email: "silvia.martinez@salesianas.org", role: "profesor" }
+    // Las claves usan una versión "sanitizada" del correo para cumplir con las
+    // restricciones de Firebase (no se permiten puntos ni caracteres
+    // especiales). Puedes reemplazarlas por el UID real de cada usuario si lo
+    // prefieres.
+    codocoderson_gmail_com: {
+      email: 'codocoderson@gmail.com',
+      role: 'admin'
+    },
+    salvador_fernandez_gmail_com: {
+      email: 'salvador.fernandez@gmail.com',
+      role: 'admin'
+    },
+    silvia_martinez_salesianas_org: {
+      email: 'silvia.martinez@salesianas.org',
+      role: 'profesor'
+    }
   }
 };
 

@@ -59,6 +59,18 @@ Aplicación web para gestionar y monitorear las visitas al WC de los alumnos.
    ```bash
    npm run init-db
    ```
+   Este script crea algunas clases y alumnos de prueba y registra tres
+   usuarios iniciales bajo el nodo `usuarios` de Firebase. Las claves de estos
+   usuarios usan la dirección de correo sanitizada (reemplazando los puntos por
+   guiones bajos) y cada entrada contiene `email` y `role`:
+
+   ```json
+   {
+     "codocoderson_gmail_com": { "email": "codocoderson@gmail.com", "role": "admin" },
+     "salvador_fernandez_gmail_com": { "email": "salvador.fernandez@gmail.com", "role": "admin" },
+     "silvia_martinez_salesianas_org": { "email": "silvia.martinez@salesianas.org", "role": "profesor" }
+   }
+   ```
 
 ## Estructura del Proyecto
 
