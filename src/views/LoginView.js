@@ -136,9 +136,9 @@ export class LoginView {
 
       } catch (error) {
         errorMessage.textContent = error.message;
+        submitButton.textContent = 'Iniciar sesión';
       } finally {
         submitButton.disabled = false;
-        submitButton.textContent = originalText;
       }
     };
 
@@ -172,4 +172,4 @@ export class LoginView {
       }
     };
   }
-} 
+}
