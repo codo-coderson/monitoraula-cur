@@ -12,6 +12,11 @@ export class Header {
       console.log('🔄 Usuario logueado - refrescando header...');
       setTimeout(() => this.refresh(), 100); // Pequeño delay para que AuthService se actualice
     });
+
+    window.addEventListener('admin-status-changed', () => {
+      console.log('👑 Admin status changed - refreshing header...');
+      this.refresh();
+    });
   }
 
   render() {
@@ -19,10 +24,10 @@ export class Header {
     this.startUpdating();
   }
 
-  async renderHeader() {
+  renderHeader() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
-    const isAdmin = user ? await RolesService.isAdmin(user) : false;
+    const isAdmin = AuthService.isAdmin;
     
     console.log('🔍 Header Debug:', { 
       user: user?.email, 
