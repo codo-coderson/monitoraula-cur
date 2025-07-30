@@ -25,7 +25,7 @@ export const AuthService = {
       onAuthStateChanged(auth, async (user) => {
         this.currentUser = user;
         if (user) {
-          this.isAdmin = RolesService.isAdmin(user.email);
+          this.isAdmin = await RolesService.isAdmin(user);
           this.lastVisitedClass = await RolesService.getLastVisitedClass(user.email);
         } else {
           this.isAdmin = false;
@@ -41,7 +41,7 @@ export const AuthService = {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
-      this.isAdmin = RolesService.isAdmin(email);
+      this.isAdmin = await RolesService.isAdmin(userCredential.user);
       this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
       return userCredential.user;
     } catch (error) {

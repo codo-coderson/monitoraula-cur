@@ -19,16 +19,15 @@ export class Header {
     this.startUpdating();
   }
 
-  renderHeader() {
+  async renderHeader() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
-    const isAdmin = user ? RolesService.isAdmin(user.email) : false;
+    const isAdmin = user ? await RolesService.isAdmin(user) : false;
     
     console.log('🔍 Header Debug:', { 
       user: user?.email, 
       userIdentifier, 
       isAdmin,
-      adminEmails: ['salvador.fernandez@salesianas.org', 'codocoderson@gmail.com'],
       authServiceCurrentUser: AuthService.currentUser?.email
     });
 

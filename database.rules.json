@@ -1,6 +1,18 @@
 {
   "rules": {
     ".read": "auth != null",
-    ".write": "auth != null"
+    ".write": "auth != null",
+    "fixed_admins": {
+      ".read": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()",
+      ".write": false
+    },
+    "designated_admins": {
+      ".read": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()",
+      ".write": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()"
+    },
+    "users": {
+      ".read": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()",
+      ".write": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()"
+    }
   }
 }
