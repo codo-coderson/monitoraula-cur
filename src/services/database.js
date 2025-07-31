@@ -7,24 +7,14 @@ const cache = {
   alumnos: {},
   registros: {},
   loaded: false,
-  initialLoadPromise: null,
-  resolveInitialLoad: null,
 };
 
 let unsubscribe = null;
 
 export const DatabaseService = {
-  init() {
-    cache.initialLoadPromise = new Promise(resolve => {
-      cache.resolveInitialLoad = resolve;
-    });
-  },
-
   // Suscripción global a toda la base de datos relevante
-  subscribeAll(onUpdate) {
-    if (unsubscribe) unsubscribe();
-    if (!cache.initialLoadPromise) this.init();
-
+  subscribeAll(onUpdate, onInitialLoad) {
+    this.unsubscribeAll();
     console.log('🔍 DatabaseService: Iniciando suscripción global...');
     
     const mainRef = ref(db);
@@ -39,14 +29,14 @@ export const DatabaseService = {
       const firstLoad = !cache.loaded;
       cache.loaded = true;
       
-      if (firstLoad) {
-        console.log('✅ DatabaseService: Primera carga de datos completada.');
-        cache.resolveInitialLoad();
+      if (firstLoad && onInitialLoad) {
+        console.log('✅ DatabaseService: Primera carga de datos completada. Ejecutando callback.');
+        onInitialLoad();
       }
-
-      console.log('🔍 DatabaseService: Caché actualizado');
       
-      if (onUpdate) onUpdate();
+      if (onUpdate) {
+        onUpdate();
+      }
     }, (error) => {
       console.error('❌ DatabaseService: Error en suscripción:', error);
     });
@@ -55,7 +45,13 @@ export const DatabaseService = {
   unsubscribeAll() {
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
-    this.init(); // Reset promise for next session
+    // Reset cache state
+    Object.assign(cache, {
+      clases: [],
+      alumnos: {},
+      registros: {},
+      loaded: false,
+    });
   },
 
   // Métodos para obtener datos de la caché
@@ -73,22 +69,6 @@ export const DatabaseService = {
   isLoaded() {
     console.log('🔍 DatabaseService.isLoaded():', cache.loaded);
     return cache.loaded;
-  },
-
-  // Método para esperar hasta que haya datos reales
-  waitForRealData(timeoutMs = 15000) {
-    if (!cache.initialLoadPromise) this.init();
-
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error(`Timeout: No se recibieron datos en ${timeoutMs}ms`));
-      }, timeoutMs);
-
-      cache.initialLoadPromise.then(() => {
-        clearTimeout(timeout);
-        resolve();
-      });
-    });
   },
 
   // Escrituras
