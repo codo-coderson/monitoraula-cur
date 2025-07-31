@@ -1,7 +1,5 @@
 {
   "rules": {
-    ".read": "auth != null",
-    ".write": "auth != null",
     "fixed_admins": {
       ".read": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()",
       ".write": false
@@ -13,6 +11,22 @@
     "users": {
       ".read": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()",
       ".write": "root.child('fixed_admins').child(auth.uid).exists() || root.child('designated_admins').child(auth.uid).exists()"
+    },
+    "clases": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "alumnos": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "registros": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "userPreferences": {
+        ".read": "auth != null",
+        ".write": "auth != null"
     }
   }
 }
