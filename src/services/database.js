@@ -126,7 +126,11 @@ export const DatabaseService = {
     });
   },
   async borrarBaseDeDatos() {
-    await remove(ref(db));
+    const updates = {};
+    updates['/alumnos'] = null;
+    updates['/clases'] = null;
+    updates['/registros'] = null;
+    await update(ref(db), updates);
   },
 
   // Obtener todos los días lectivos (días con al menos una salida en cualquier clase)
