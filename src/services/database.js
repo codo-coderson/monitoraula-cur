@@ -9,42 +9,42 @@ const cache = {
   loaded: false,
 };
 
-let unsubscribe = null;
+let unsubscribers = [];
 
 export const DatabaseService = {
   // Suscripción global a toda la base de datos relevante
   subscribeAll(onUpdate, onInitialLoad) {
     this.unsubscribeAll();
-    console.log('🔍 DatabaseService: Iniciando suscripción global...');
+    console.log('🔍 DatabaseService: Iniciando suscripciones optimizadas...');
     
-    const mainRef = ref(db);
-    unsubscribe = onValue(mainRef, (snapshot) => {
-      console.log('🔍 DatabaseService: Datos recibidos de Firebase');
-      const data = snapshot.val() || {};
-      
-      cache.clases = data.clases || [];
-      cache.alumnos = data.alumnos || {};
-      cache.registros = data.registros || {};
+    const nodes = ['clases', 'alumnos', 'registros'];
+    const initialLoads = nodes.map(node => new Promise(resolve => {
+      const nodeRef = ref(db, `/${node}`);
+      const unsubscribe = onValue(nodeRef, (snapshot) => {
+        console.log(`🔍 DatabaseService: Datos recibidos para /${node}`);
+        cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
+        if(onUpdate) onUpdate();
+        resolve();
+      }, (error) => {
+        console.error(`❌ DatabaseService: Error en /${node}:`, error);
+        resolve(); // Resolve anyway to not block the app
+      });
+      unsubscribers.push(unsubscribe);
+    }));
 
+    Promise.all(initialLoads).then(() => {
       const firstLoad = !cache.loaded;
       cache.loaded = true;
-      
       if (firstLoad && onInitialLoad) {
-        console.log('✅ DatabaseService: Primera carga de datos completada. Ejecutando callback.');
+        console.log('✅ DatabaseService: Carga inicial de todos los nodos completada.');
         onInitialLoad();
       }
-      
-      if (onUpdate) {
-        onUpdate();
-      }
-    }, (error) => {
-      console.error('❌ DatabaseService: Error en suscripción:', error);
     });
   },
 
   unsubscribeAll() {
-    if (unsubscribe) unsubscribe();
-    unsubscribe = null;
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
     // Reset cache state
     Object.assign(cache, {
       clases: [],
