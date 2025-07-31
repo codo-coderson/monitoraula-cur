@@ -7,33 +7,44 @@ const cache = {
   alumnos: {},
   registros: {},
   loaded: false,
+  initialLoadPromise: null,
+  resolveInitialLoad: null,
 };
 
 let unsubscribe = null;
 
 export const DatabaseService = {
+  init() {
+    cache.initialLoadPromise = new Promise(resolve => {
+      cache.resolveInitialLoad = resolve;
+    });
+  },
+
   // Suscripción global a toda la base de datos relevante
   subscribeAll(onUpdate) {
     if (unsubscribe) unsubscribe();
+    if (!cache.initialLoadPromise) this.init();
+
     console.log('🔍 DatabaseService: Iniciando suscripción global...');
     
     const mainRef = ref(db);
     unsubscribe = onValue(mainRef, (snapshot) => {
       console.log('🔍 DatabaseService: Datos recibidos de Firebase');
       const data = snapshot.val() || {};
-      console.log('🔍 DatabaseService: Datos completos:', data);
       
       cache.clases = data.clases || [];
       cache.alumnos = data.alumnos || {};
       cache.registros = data.registros || {};
+
+      const firstLoad = !cache.loaded;
       cache.loaded = true;
       
-      console.log('🔍 DatabaseService: Caché actualizado:', {
-        clases: cache.clases,
-        numAlumnos: Object.keys(cache.alumnos).length,
-        numRegistros: Object.keys(cache.registros).length,
-        loaded: cache.loaded
-      });
+      if (firstLoad) {
+        console.log('✅ DatabaseService: Primera carga de datos completada.');
+        cache.resolveInitialLoad();
+      }
+
+      console.log('🔍 DatabaseService: Caché actualizado');
       
       if (onUpdate) onUpdate();
     }, (error) => {
@@ -44,6 +55,7 @@ export const DatabaseService = {
   unsubscribeAll() {
     if (unsubscribe) unsubscribe();
     unsubscribe = null;
+    this.init(); // Reset promise for next session
   },
 
   // Métodos para obtener datos de la caché
@@ -63,43 +75,19 @@ export const DatabaseService = {
     return cache.loaded;
   },
 
-  // Nuevo método para verificar si realmente hay datos
-  hasRealData() {
-    const hasClases = cache.clases && cache.clases.length > 0;
-    const hasAlumnos = cache.alumnos && Object.keys(cache.alumnos).length > 0;
-    console.log('🔍 DatabaseService.hasRealData():', { 
-      loaded: cache.loaded, 
-      hasClases, 
-      hasAlumnos,
-      totalClases: cache.clases?.length || 0,
-      totalAlumnos: Object.keys(cache.alumnos || {}).length
-    });
-    return cache.loaded && hasClases && hasAlumnos;
-  },
-
   // Método para esperar hasta que haya datos reales
-  waitForRealData(timeoutMs = 10000) {
+  waitForRealData(timeoutMs = 15000) {
+    if (!cache.initialLoadPromise) this.init();
+
     return new Promise((resolve, reject) => {
-      const startTime = Date.now();
-      
-      const checkData = () => {
-        const elapsed = Date.now() - startTime;
-        console.log(`🔍 Esperando datos reales... ${elapsed}ms`);
-        
-        if (this.hasRealData()) {
-          console.log('✅ Datos reales disponibles');
-          return resolve();
-        }
-        
-        if (elapsed >= timeoutMs) {
-          console.warn('⚠️ Timeout esperando datos reales');
-          return reject(new Error('Timeout esperando datos'));
-        }
-        
-        setTimeout(checkData, 200);
-      };
-      
-      checkData();
+      const timeout = setTimeout(() => {
+        reject(new Error(`Timeout: No se recibieron datos en ${timeoutMs}ms`));
+      }, timeoutMs);
+
+      cache.initialLoadPromise.then(() => {
+        clearTimeout(timeout);
+        resolve();
+      });
     });
   },
 
