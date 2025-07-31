@@ -1,4 +1,5 @@
 import { AuthService } from '../services/auth.js';
+import { DatabaseService } from '../services/database.js';
 
 export class LoginView {
   constructor(container) {
@@ -133,6 +134,27 @@ export class LoginView {
 
         // Emitir evento para refrescar header después del login
         window.dispatchEvent(new CustomEvent('user-logged-in'));
+
+        // Navegar a la vista principal
+        const clases = DatabaseService.getClases();
+        const lastClass = AuthService.lastVisitedClass;
+        const clase = lastClass && clases.includes(lastClass) ? lastClass : (clases.length > 0 ? clases[0] : null);
+
+        if (clase) {
+          window.dispatchEvent(new CustomEvent('navegacion', {
+            detail: { vista: 'clase', params: { clase } }
+          }));
+        } else {
+          // Si no hay clases, quizás ir a una vista de "bienvenida" o "carga"
+          // Por ahora, para ser consistentes, vamos a la vista de carga si es admin
+          if (AuthService.isAdmin) {
+            window.dispatchEvent(new CustomEvent('navegacion', {
+              detail: { vista: 'carga' }
+            }));
+          } else {
+            alert('No hay clases disponibles. Contacta a un administrador.');
+          }
+        }
 
       } catch (error) {
         errorMessage.textContent = error.message;
