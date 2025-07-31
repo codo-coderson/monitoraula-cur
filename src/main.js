@@ -6,6 +6,7 @@ import { ClaseView } from './views/ClaseView.js';
 import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
 import { InformeView } from './views/InformeView.js';
+import { LoadingComponent } from './components/Loading.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
 import { FontSizeService } from './utils/fontsize.js';
@@ -45,7 +46,8 @@ class App {
 
       this.mainContainer = document.getElementById('main-content');
       this.header = new Header(document.getElementById('header'));
-      console.log('✅ Header creado');
+      this.loadingComponent = new LoadingComponent(this.mainContainer);
+      console.log('✅ Header y Loading creados');
       
       // Inicializar vistas
       this.views = {
@@ -303,6 +305,18 @@ class App {
         params = {};
       }
       
+      const dataDependentViews = ['clase', 'informe', 'carga'];
+      if (dataDependentViews.includes(vista) && !DatabaseService.isLoaded()) {
+        this.loadingComponent.render('Sincronizando con la base de datos...');
+        try {
+          await DatabaseService.waitForRealData(15000); // 15 segundos
+        } catch (error) {
+          console.error('❌ Error esperando datos en navegación:', error);
+          this.mostrarError('No se pudieron cargar los datos. Revisa tu conexión e inténtalo de nuevo.');
+          return;
+        }
+      }
+
       // Mostrar/ocultar elementos según la vista
       const header = document.getElementById('header');
       const tabsNav = document.getElementById('tabs-nav');
