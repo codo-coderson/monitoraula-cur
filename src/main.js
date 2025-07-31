@@ -47,7 +47,11 @@ class App {
       this.mainContainer = document.getElementById('main-content');
       this.header = new Header(document.getElementById('header'));
       this.loadingComponent = new LoadingComponent(this.mainContainer);
-      this.pendingNavigation = null;
+
+      this.authReady = false;
+      this.dataReady = false;
+      this.initialNavigationDone = false;
+
       console.log('✅ Header y Loading creados');
       
       // Inicializar vistas
@@ -76,78 +80,74 @@ class App {
   }
 
   async iniciar() {
-    try {
-      console.log('🎬 Iniciando renderizado...');
-      this.header.render();
+    this.header.render();
+    this.loadingComponent.render('Iniciando...');
 
-      const onInitialData = () => {
-        console.log('✅ Datos iniciales recibidos, procesando navegación pendiente...');
-        if (this.pendingNavigation) {
-          const { vista, params } = this.pendingNavigation;
-          this.pendingNavigation = null;
-          this.navegarA(vista, params);
-        }
-      };
-
-      const onDataUpdate = () => {
-        console.log('🔄 Base de datos actualizada - refrescando vistas y pestañas');
-        if (this.currentView && typeof this.currentView.render === 'function') {
-          if (this.currentView === this.views.clase) {
-            this.currentView.render(this.currentClase);
-          } else {
-            this.currentView.render();
-          }
+    const onDataUpdate = () => {
+      if (this.initialNavigationDone && this.currentView) {
+        if (this.currentView === this.views.clase) {
+          this.currentView.render(this.currentClase);
+        } else {
+          this.currentView.render();
         }
         if (this.tabsNav) {
           this.tabsNav.clases = DatabaseService.getClases();
           this.tabsNav.render();
         }
-      };
-
-      DatabaseService.subscribeAll(onDataUpdate, onInitialData);
-
-      await AuthService.init();
-      
-      if (!AuthService.isAuthenticated()) {
-        this.navegarA('login');
-        return;
       }
+    };
 
-      this.header.refresh();
-      await CleanupService.limpiarRegistrosAntiguos();
-      
-      const clases = DatabaseService.getClases();
-      let initialVista = 'carga';
-      let initialParams = {};
+    const onInitialData = () => {
+      console.log('✅ Datos iniciales listos.');
+      this.dataReady = true;
+      this.tryInitialNavigation();
+    };
 
-      if (clases && clases.length > 0) {
-        const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)) 
-          ? AuthService.lastVisitedClass 
-          : clases[0];
-        initialVista = 'clase';
-        initialParams = { clase: claseInicial };
-      }
-      
-      this.navegarA(initialVista, initialParams);
-      console.log('✅ Aplicación iniciada, navegación inicial solicitada.');
-    } catch (error) {
-      console.error('❌ Error al iniciar la aplicación:', error);
-      this.mostrarError('Error al iniciar la aplicación');
+    DatabaseService.subscribeAll(onDataUpdate, onInitialData);
+
+    await AuthService.init();
+    console.log('✅ Autenticación lista.');
+    this.authReady = true;
+    this.tryInitialNavigation();
+  }
+
+  tryInitialNavigation() {
+    if (this.initialNavigationDone || !this.authReady || !this.dataReady) {
+      return;
+    }
+
+    this.initialNavigationDone = true;
+    console.log('🚀 Auth y Datos listos. Realizando navegación inicial...');
+
+    if (!AuthService.isAuthenticated()) {
+      this.navegarA('login');
+      return;
+    }
+
+    this.header.refresh();
+    CleanupService.limpiarRegistrosAntiguos();
+
+    const clases = DatabaseService.getClases();
+    if (clases && clases.length > 0) {
+      const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass))
+        ? AuthService.lastVisitedClass
+        : clases[0];
+      this.navegarA('clase', { clase: claseInicial });
+    } else {
+      this.navegarA('carga');
     }
   }
 
   navegarA(vista, params = {}) {
     try {
+      if (!this.initialNavigationDone && vista !== 'login') {
+        this.loadingComponent.render('Cargando...');
+        return;
+      }
+
       if (!AuthService.isAuthenticated() && vista !== 'login') {
         vista = 'login';
         params = {};
-      }
-
-      const dataDependentViews = ['clase', 'informe', 'carga'];
-      if (dataDependentViews.includes(vista) && !DatabaseService.isLoaded()) {
-        this.loadingComponent.render('Cargando datos...');
-        this.pendingNavigation = { vista, params };
-        return;
       }
 
       const header = document.getElementById('header');
@@ -173,7 +173,6 @@ class App {
             this.tabsNav.render();
             tabsNav.style.display = 'block';
           } else {
-            // No hay clases, no mostrar tabs
             tabsNav.style.display = 'none';
           }
         } else {
