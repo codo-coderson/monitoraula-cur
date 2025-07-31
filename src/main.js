@@ -90,13 +90,15 @@ class App {
 
     this.loadingComponent.render('Cargando datos de la aplicación...');
 
+    const timeoutPromise = new Promise(resolve => setTimeout(resolve, 5000));
+
     try {
-      await DatabaseService.loadInitialData();
+      await Promise.race([DatabaseService.loadInitialData(), timeoutPromise]);
     } catch (error) {
-      console.error('Error fatal al cargar datos iniciales:', error);
-      this.mostrarError('No se pudieron cargar los datos. Por favor, recarga la página.');
-      return;
+      console.error('Error fatal al cargar datos iniciales, continuando por timeout:', error);
     }
+
+    this.initialNavigationDone = true; // Mark as done regardless of outcome
 
     const onDataUpdate = () => {
       if (this.currentView) {
