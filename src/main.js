@@ -48,8 +48,6 @@ class App {
       this.header = new Header(document.getElementById('header'));
       this.loadingComponent = new LoadingComponent(this.mainContainer);
 
-      this.authReady = false;
-      this.dataReady = false;
       this.initialNavigationDone = false;
 
       console.log('✅ Header y Loading creados');
@@ -81,10 +79,27 @@ class App {
 
   async iniciar() {
     this.header.render();
-    this.loadingComponent.render('Iniciando...');
+    this.loadingComponent.render('Iniciando sesión...');
+
+    await AuthService.init();
+
+    if (!AuthService.isAuthenticated()) {
+      this.navegarA('login');
+      return;
+    }
+
+    this.loadingComponent.render('Cargando datos de la aplicación...');
+
+    try {
+      await DatabaseService.loadInitialData();
+    } catch (error) {
+      console.error('Error fatal al cargar datos iniciales:', error);
+      this.mostrarError('No se pudieron cargar los datos. Por favor, recarga la página.');
+      return;
+    }
 
     const onDataUpdate = () => {
-      if (this.initialNavigationDone && this.currentView) {
+      if (this.currentView) {
         if (this.currentView === this.views.clase) {
           this.currentView.render(this.currentClase);
         } else {
@@ -96,33 +111,7 @@ class App {
         }
       }
     };
-
-    const onInitialData = () => {
-      console.log('✅ Datos iniciales listos.');
-      this.dataReady = true;
-      this.tryInitialNavigation();
-    };
-
-    DatabaseService.subscribeAll(onDataUpdate, onInitialData);
-
-    await AuthService.init();
-    console.log('✅ Autenticación lista.');
-    this.authReady = true;
-    this.tryInitialNavigation();
-  }
-
-  tryInitialNavigation() {
-    if (this.initialNavigationDone || !this.authReady || !this.dataReady) {
-      return;
-    }
-
-    this.initialNavigationDone = true;
-    console.log('🚀 Auth y Datos listos. Realizando navegación inicial...');
-
-    if (!AuthService.isAuthenticated()) {
-      this.navegarA('login');
-      return;
-    }
+    DatabaseService.subscribeToUpdates(onDataUpdate);
 
     this.header.refresh();
     CleanupService.limpiarRegistrosAntiguos();

@@ -80,14 +80,6 @@ export class ClaseView {
         </div>
       `;
 
-      // Esperar a que los datos estén cargados
-      console.log('🔄 ClaseView: Esperando datos para clase', clase);
-      try {
-        await DatabaseService.waitForRealData(5000); // 5 segundos para ClaseView
-      } catch (error) {
-        console.warn('⚠️ ClaseView: Timeout esperando datos, continuando...', error);
-      }
-
       // Usar la caché global
       const alumnos = DatabaseService.getAlumnosPorClase(clase);
       const alumnosContainer = document.getElementById('alumnos-container');
@@ -170,32 +162,6 @@ export class ClaseView {
         </div>
       `;
     }
-  }
-
-  async waitForData() {
-    return new Promise((resolve) => {
-      let attempts = 0;
-      const maxAttempts = 30; // 3 segundos máximo
-      
-      const checkData = () => {
-        attempts++;
-        console.log(`🔍 ClaseView: Esperando datos... Intento ${attempts}/${maxAttempts}, loaded: ${DatabaseService.isLoaded()}`);
-        
-        if (DatabaseService.isLoaded()) {
-          console.log('✅ ClaseView: Datos cargados');
-          return resolve();
-        }
-        
-        if (attempts >= maxAttempts) {
-          console.warn('⚠️ ClaseView: Timeout esperando datos - continuando');
-          return resolve();
-        }
-        
-        setTimeout(checkData, 100);
-      };
-      
-      checkData();
-    });
   }
 
   updateAlumno(alumnoId) {

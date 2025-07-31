@@ -10,41 +10,61 @@ const cache = {
 };
 
 let unsubscribers = [];
+let initialLoadPromise = null;
 
 export const DatabaseService = {
-  // Suscripción global a toda la base de datos relevante
-  subscribeAll(onUpdate, onInitialLoad) {
-    this.unsubscribeAll();
-    console.log('🔍 DatabaseService: Iniciando suscripciones optimizadas...');
-    
-    const nodes = ['clases', 'alumnos', 'registros'];
-    const initialLoads = nodes.map(node => new Promise(resolve => {
-      const nodeRef = ref(db, `/${node}`);
-      const unsubscribe = onValue(nodeRef, (snapshot) => {
-        console.log(`🔍 DatabaseService: Datos recibidos para /${node}`);
-        cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
-        if(onUpdate) onUpdate();
-        resolve();
-      }, (error) => {
-        console.error(`❌ DatabaseService: Error en /${node}:`, error);
-        resolve(); // Resolve anyway to not block the app
-      });
-      unsubscribers.push(unsubscribe);
-    }));
+  loadInitialData() {
+    if (initialLoadPromise) return initialLoadPromise;
 
-    Promise.all(initialLoads).then(() => {
-      const firstLoad = !cache.loaded;
-      cache.loaded = true;
-      if (firstLoad && onInitialLoad) {
+    initialLoadPromise = new Promise((resolve, reject) => {
+      this.unsubscribeAll();
+      console.log('🔍 DatabaseService: Iniciando carga inicial de datos...');
+
+      const nodes = ['clases', 'alumnos', 'registros'];
+      const initialLoads = nodes.map(node => new Promise((nodeResolve, nodeReject) => {
+        const nodeRef = ref(db, `/${node}`);
+        const unsubscribe = onValue(nodeRef, (snapshot) => {
+          console.log(`🔍 DatabaseService: Datos recibidos para /${node}`);
+          cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
+          nodeResolve();
+        }, (error) => {
+          console.error(`❌ DatabaseService: Error en /${node}:`, error);
+          nodeReject(error);
+        });
+        unsubscribers.push(unsubscribe);
+      }));
+
+      Promise.all(initialLoads).then(() => {
+        cache.loaded = true;
         console.log('✅ DatabaseService: Carga inicial de todos los nodos completada.');
-        onInitialLoad();
-      }
+        resolve();
+      }).catch(error => {
+        console.error('❌ DatabaseService: Falló una de las cargas iniciales.');
+        reject(error);
+      });
+    });
+
+    return initialLoadPromise;
+  },
+
+  subscribeToUpdates(onUpdate) {
+    // This assumes loadInitialData has already been called and populated the unsubscribers array
+    const nodes = ['clases', 'alumnos', 'registros'];
+    nodes.forEach(node => {
+        const nodeRef = ref(db, `/${node}`);
+        const unsubscribe = onValue(nodeRef, (snapshot) => {
+            console.log(`🔄 DatabaseService: Actualización recibida para /${node}`);
+            cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
+            if (onUpdate) onUpdate();
+        });
+        unsubscribers.push(unsubscribe);
     });
   },
 
   unsubscribeAll() {
     unsubscribers.forEach(unsub => unsub());
     unsubscribers = [];
+    initialLoadPromise = null;
     // Reset cache state
     Object.assign(cache, {
       clases: [],

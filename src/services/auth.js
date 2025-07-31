@@ -22,9 +22,10 @@ export const AuthService = {
   adminListenerUnsubscribe: null,
 
   // Inicializar el servicio de autenticación
-  async init() {
+  init() {
     return new Promise((resolve) => {
-      onAuthStateChanged(auth, async (user) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe(); // We only need the initial state once.
         this.currentUser = user;
         if (user) {
           await this.updateAdminStatus();
