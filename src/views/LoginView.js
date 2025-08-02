@@ -132,13 +132,34 @@ export class LoginView {
         // Intentar login
         await AuthService.login(email, password);
 
-        // Recargar la aplicación para que el flujo de inicio se ejecute de nuevo
-        window.location.reload();
+        // Cargar datos ANTES de navegar
+        submitButton.textContent = 'Cargando datos...';
+        await DatabaseService.loadInitialData();
+
+        // Navegar a la vista principal
+        const clases = DatabaseService.getClases();
+        const lastClass = AuthService.lastVisitedClass;
+        const clase = lastClass && clases.includes(lastClass) ? lastClass : (clases.length > 0 ? clases[0] : null);
+
+        if (clase) {
+          window.dispatchEvent(new CustomEvent('navegacion', {
+            detail: { vista: 'clase', params: { clase } }
+          }));
+        } else {
+          if (AuthService.isAdmin) {
+            window.dispatchEvent(new CustomEvent('navegacion', {
+              detail: { vista: 'carga' }
+            }));
+          } else {
+            // Si no es admin y no hay clases, es un estado de error.
+            // Mostramos el error y reseteamos el botón.
+            throw new Error('No hay clases disponibles. Contacta a un administrador.');
+          }
+        }
 
       } catch (error) {
         errorMessage.textContent = error.message;
-        submitButton.textContent = 'Iniciar sesión';
-      } finally {
+        submitButton.textContent = 'Iniciar Sesión';
         submitButton.disabled = false;
       }
     };
