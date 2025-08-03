@@ -30,7 +30,7 @@ export const AuthService = {
         if (user) {
           await this.updateAdminStatus();
           this.listenForAdminChanges();
-          this.lastVisitedClass = await RolesService.getLastVisitedClass(user.email);
+          this.lastVisitedClass = await RolesService.getLastVisitedClass(this.currentUser.email);
         } else {
           this.isAdmin = false;
           this.lastVisitedClass = null;
@@ -67,8 +67,9 @@ export const AuthService = {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
-      this.isAdmin = await RolesService.isAdmin(userCredential.user.uid);
-      this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
+      await this.updateAdminStatus();
+      this.listenForAdminChanges();
+      this.lastVisitedClass = await RolesService.getLastVisitedClass(this.currentUser.email);
       return userCredential.user;
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
@@ -137,4 +138,4 @@ export const AuthService = {
 
     return new Error(errorMessages[error.code] || error.message);
   }
-}; 
+};
