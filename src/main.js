@@ -79,27 +79,25 @@ class App {
 
   async iniciar() {
     this.header.render();
-    this.loadingComponent.render('Iniciando sesión...');
 
+    // Comprobar si ya hay un usuario logueado
     await AuthService.init();
 
-    if (!AuthService.isAuthenticated()) {
+    if (AuthService.isAuthenticated()) {
+      // Si ya está logueado, cargar datos y navegar
+      this.loadingComponent.render('Cargando datos...');
+      await DatabaseService.loadInitialData();
+      this.initialNavigationDone = true;
+      this.navegarDirecto();
+    } else {
+      // Si no, mostrar la pantalla de login
+      this.initialNavigationDone = true;
       this.navegarA('login');
-      return;
     }
+  }
 
-    this.loadingComponent.render('Cargando datos de la aplicación...');
-
-    const timeoutPromise = new Promise(resolve => setTimeout(resolve, 5000));
-
-    try {
-      await Promise.race([DatabaseService.loadInitialData(), timeoutPromise]);
-    } catch (error) {
-      console.error('Error fatal al cargar datos iniciales, continuando por timeout:', error);
-    }
-
-    this.initialNavigationDone = true; // Mark as done regardless of outcome
-
+  // Navega a la vista principal una vez que los datos están listos
+  navegarDirecto() {
     const onDataUpdate = () => {
       if (this.currentView) {
         if (this.currentView === this.views.clase) {
@@ -125,17 +123,18 @@ class App {
         : clases[0];
       this.navegarA('clase', { clase: claseInicial });
     } else {
-      this.navegarA('carga');
+      if (AuthService.isAdmin) {
+        this.navegarA('carga');
+      } else {
+        alert('La base de datos de alumnos está vacía. Contacta con un administrador.');
+        AuthService.logout();
+        this.navegarA('login');
+      }
     }
   }
 
   navegarA(vista, params = {}) {
     try {
-      if (!this.initialNavigationDone && vista !== 'login') {
-        this.loadingComponent.render('Cargando...');
-        return;
-      }
-
       if (!AuthService.isAuthenticated() && vista !== 'login') {
         vista = 'login';
         params = {};

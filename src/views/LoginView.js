@@ -121,9 +121,9 @@ export class LoginView {
       const email = emailInput.value;
       const password = document.getElementById('password').value;
 
+      const originalText = submitButton.textContent;
       try {
         // Mostrar estado de carga
-        const originalText = submitButton.textContent;
         submitButton.disabled = true;
         submitButton.textContent = 'Iniciando sesión...';
         errorMessage.textContent = '';
@@ -132,13 +132,12 @@ export class LoginView {
         // Intentar login
         await AuthService.login(email, password);
 
-        // Recargar la aplicación para que el flujo de inicio se ejecute de nuevo
+        // Forzar recarga para que el flujo de 'iniciar' en main.js se encargue de todo
         window.location.reload();
 
       } catch (error) {
         errorMessage.textContent = error.message;
-        submitButton.textContent = 'Iniciar sesión';
-      } finally {
+        submitButton.textContent = originalText;
         submitButton.disabled = false;
       }
     };
