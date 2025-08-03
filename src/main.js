@@ -178,6 +178,7 @@ class App {
 
       if (vista === 'clase') {
         this.currentView.render(params.clase);
+        AuthService.updateLastVisitedClass(params.clase);
       } else if (vista === 'informe') {
         this.currentView.render(params.clase, params.alumnoId);
       } else {
