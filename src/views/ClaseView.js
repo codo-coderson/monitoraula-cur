@@ -94,7 +94,7 @@ export class ClaseView {
       if (!Object.keys(alumnos).length) {
         // Verificar si el usuario es admin para mostrar el botón
         const user = AuthService.getCurrentUser();
-        const isAdmin = user ? RolesService.isAdmin(user.email) : false;
+        const isAdmin = user ? await RolesService.isAdmin(user.uid) : false;
         
         console.log('⚠️ No hay alumnos en la clase', clase, '- usuario admin:', isAdmin);
         

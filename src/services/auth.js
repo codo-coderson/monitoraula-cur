@@ -67,7 +67,7 @@ export const AuthService = {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
-      this.isAdmin = await RolesService.isAdmin(userCredential.user);
+      this.isAdmin = await RolesService.isAdmin(userCredential.user.uid);
       this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
       return userCredential.user;
     } catch (error) {

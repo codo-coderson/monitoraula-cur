@@ -1,28 +1,58 @@
 import { ref, get, set } from 'firebase/database';
 import { db } from '../config/firebase';
-import { AuthService } from './auth.js';
 
-let adminUids = null; // Cache for admin UIDs
+let adminUids = null; // Cache for admin UIDs.
+let userEmailCache = {}; // Cache for mapping UID to email for getLastVisitedClass.
 
 export const RolesService = {
   async _fetchAdminUids() {
     if (adminUids) {
       return adminUids;
     }
+
+    // Fetch fixed admins
     const fixedAdminsRef = ref(db, 'fixed_admins');
-    const designatedAdminsRef = ref(db, 'designated_admins');
-    const [fixedAdminsSnap, designatedAdminsSnap] = await Promise.all([
-      get(fixedAdminsRef),
-      get(designatedAdminsRef)
-    ]);
-    const fixedUids = fixedAdminsSnap.exists() ? Object.keys(fixedAdminsSnap.val()) : [];
-    const designatedUids = designatedAdminsSnap.exists() ? Object.keys(designatedAdminsSnap.val()) : [];
-    adminUids = [...fixedUids, ...designatedUids];
-    return adminUids;
+    const fixedAdminsSnap = await get(fixedAdminsRef);
+    const fixedAdmins = fixedAdminsSnap.exists() ? fixedAdminsSnap.val() : {};
+
+    // Fetch designated admins
+    try {
+      const designatedAdminsRef = ref(db, 'designated_admins');
+      const designatedAdminsSnap = await get(designatedAdminsRef);
+      const designatedAdmins = designatedAdminsSnap.exists() ? designatedAdminsSnap.val() : {};
+
+      // Combine and get UIDs
+      adminUids = [...Object.keys(fixedAdmins), ...Object.keys(designatedAdmins)];
+      return adminUids;
+    } catch (error) {
+      console.error("Error fetching designated admins:", error);
+      // If there's an error fetching designated admins, we'll just use fixed admins
+      adminUids = Object.keys(fixedAdmins);
+      return adminUids;
+    }
+  },
+
+  async _fetchUserEmail(uid) {
+    if (userEmailCache[uid]) {
+      return userEmailCache[uid];
+    }
+    try {
+      const userRef = ref(db, `users/${uid}`);
+      const snapshot = await get(userRef);
+      if (snapshot.exists()) {
+        const email = snapshot.val();
+        userEmailCache[uid] = email;
+        return email;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching user email:", error);
+      return null;
+    }
   },
 
   async isAdmin(user) {
-    if (!user) {
+    if (!user || !user.uid) {
       return false;
     }
     const uids = await this._fetchAdminUids();
@@ -33,31 +63,20 @@ export const RolesService = {
     adminUids = null;
   },
 
-  async addAdmin(email) {
-    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
-    const userRef = ref(db, `users/${sanitizedEmail}`);
-    const snapshot = await get(userRef);
-    if (!snapshot.exists()) {
-      throw new Error("User not found");
+  async addAdmin(uid) {
+    if (!uid) {
+      throw new Error("UID is required to add an admin.");
     }
-    const uid = snapshot.val();
     const designatedAdminsRef = ref(db, `designated_admins/${uid}`);
-    await set(designatedAdminsRef, email);
+    await set(designatedAdminsRef, true); // Set to true or any value to indicate presence
     this.invalidateAdminCache();
   },
 
-  async getLastVisitedClass(email) {
-    try {
-      const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
-      const snapshot = await get(userPrefsRef);
-      return snapshot.exists() ? snapshot.val().lastClass : null;
-    } catch (error) {
-      console.error('Error al obtener la última clase visitada:', error);
-      return null;
-    }
-  },
+  async getLastVisitedClass(uid) {
+    if (!uid) return null;
+    const email = await this._fetchUserEmail(uid);
+    if (!email) return null;
 
-  async setLastVisitedClass(email, className) {
     try {
       const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
       await set(userPrefsRef, {
