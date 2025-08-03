@@ -2,7 +2,6 @@ import { ref, get, set } from 'firebase/database';
 import { db } from '../config/firebase';
 
 let adminUids = null; // Cache for admin UIDs.
-let userEmailCache = {}; // Cache for mapping UID to email for getLastVisitedClass.
 
 export const RolesService = {
   async _fetchAdminUids() {
@@ -32,25 +31,6 @@ export const RolesService = {
     }
   },
 
-  async _fetchUserEmail(uid) {
-    if (userEmailCache[uid]) {
-      return userEmailCache[uid];
-    }
-    try {
-      const userRef = ref(db, `users/${uid}`);
-      const snapshot = await get(userRef);
-      if (snapshot.exists()) {
-        const email = snapshot.val();
-        userEmailCache[uid] = email;
-        return email;
-      }
-      return null;
-    } catch (error) {
-      console.error("Error fetching user email:", error);
-      return null;
-    }
-  },
-
   async isAdmin(user) {
     if (!user || !user.uid) {
       return false;
@@ -72,13 +52,29 @@ export const RolesService = {
     this.invalidateAdminCache();
   },
 
-  async getLastVisitedClass(uid) {
-    if (!uid) return null;
-    const email = await this._fetchUserEmail(uid);
+  async getLastVisitedClass(email) {
     if (!email) return null;
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
 
     try {
-      const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
+      const userPrefsRef = ref(db, `userPreferences/${sanitizedEmail}`);
+      const snapshot = await get(userPrefsRef);
+      if (snapshot.exists()) {
+        const prefs = snapshot.val();
+        return prefs.lastClass || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error al obtener la última clase visitada:', error);
+      return null;
+    }
+  },
+
+  async setLastVisitedClass(email, className) {
+    if (!email || !className) return;
+    const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+    try {
+      const userPrefsRef = ref(db, `userPreferences/${sanitizedEmail}`);
       await set(userPrefsRef, {
         lastClass: className,
         lastVisit: new Date().toISOString()
@@ -87,4 +83,4 @@ export const RolesService = {
       console.error('Error al guardar la última clase visitada:', error);
     }
   }
-}; 
+};
