@@ -7,8 +7,9 @@ import {
   browserLocalPersistence,
   sendPasswordResetEmail
 } from 'firebase/auth';
+import { onValue, ref } from 'firebase/database';
 import { RolesService } from './roles.js';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
 
 // Configurar persistencia local (equivalente a una cookie)
 setPersistence(auth, browserLocalPersistence);
@@ -18,21 +19,46 @@ export const AuthService = {
   currentUser: null,
   isAdmin: false,
   lastVisitedClass: null,
+  adminListenerUnsubscribe: null,
 
   // Inicializar el servicio de autenticación
-  async init() {
+  init() {
     return new Promise((resolve) => {
-      onAuthStateChanged(auth, async (user) => {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+        unsubscribe(); // We only need the initial state once.
         this.currentUser = user;
         if (user) {
-          this.isAdmin = RolesService.isAdmin(user.email);
+          await this.updateAdminStatus();
+          this.listenForAdminChanges();
           this.lastVisitedClass = await RolesService.getLastVisitedClass(user.email);
         } else {
           this.isAdmin = false;
           this.lastVisitedClass = null;
+          if (this.adminListenerUnsubscribe) {
+            this.adminListenerUnsubscribe();
+          }
         }
         resolve(user);
       });
+    });
+  },
+
+  async updateAdminStatus() {
+    const wasAdmin = this.isAdmin;
+    this.isAdmin = await RolesService.isAdmin(this.currentUser);
+    if (wasAdmin !== this.isAdmin) {
+      window.dispatchEvent(new CustomEvent('admin-status-changed'));
+    }
+  },
+
+  listenForAdminChanges() {
+    if (this.adminListenerUnsubscribe) {
+      this.adminListenerUnsubscribe();
+    }
+    const designatedAdminsRef = ref(db, 'designated_admins');
+    this.adminListenerUnsubscribe = onValue(designatedAdminsRef, () => {
+      RolesService.invalidateAdminCache();
+      this.updateAdminStatus();
     });
   },
 
@@ -41,7 +67,7 @@ export const AuthService = {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
-      this.isAdmin = RolesService.isAdmin(email);
+      this.isAdmin = await RolesService.isAdmin(userCredential.user);
       this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
       return userCredential.user;
     } catch (error) {
@@ -53,6 +79,9 @@ export const AuthService = {
   // Cerrar sesión
   async logout() {
     try {
+      if (this.adminListenerUnsubscribe) {
+        this.adminListenerUnsubscribe();
+      }
       await signOut(auth);
       this.currentUser = null;
       this.isAdmin = false;

@@ -40,6 +40,15 @@ const datosIniciales = {
         nombre: 'María Rodríguez'
       }
     }
+  },
+  fixed_admins: {
+    'yEQpuLmSnqhg03XwbQAaJ2TtVhk2': 'salvador.fernandez@salesianas.org',
+    'W1WvJJB88DMLETAYWhDzeqGiBEw1': 'codocoderson@gmail.com'
+  },
+  designated_admins: {},
+  users: {
+    'salvador_fernandez@salesianas_org': 'yEQpuLmSnqhg03XwbQAaJ2TtVhk2',
+    'codocoderson@gmail_com': 'W1WvJJB88DMLETAYWhDzeqGiBEw1'
   }
 };
 
@@ -54,6 +63,11 @@ async function inicializarDB() {
       await set(ref(db, `alumnos/${clase}`), alumnos);
     }
     
+    // Guardar admins
+    await set(ref(db, 'fixed_admins'), datosIniciales.fixed_admins);
+    await set(ref(db, 'designated_admins'), datosIniciales.designated_admins);
+    await set(ref(db, 'users'), datosIniciales.users);
+
     console.log('Base de datos inicializada correctamente');
     process.exit(0);
   } catch (error) {

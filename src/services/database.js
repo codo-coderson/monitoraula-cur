@@ -9,41 +9,69 @@ const cache = {
   loaded: false,
 };
 
-let unsubscribe = null;
+let unsubscribers = [];
+let initialLoadPromise = null;
 
 export const DatabaseService = {
-  // Suscripción global a toda la base de datos relevante
-  subscribeAll(onUpdate) {
-    if (unsubscribe) unsubscribe();
-    console.log('🔍 DatabaseService: Iniciando suscripción global...');
-    
-    const mainRef = ref(db);
-    unsubscribe = onValue(mainRef, (snapshot) => {
-      console.log('🔍 DatabaseService: Datos recibidos de Firebase');
-      const data = snapshot.val() || {};
-      console.log('🔍 DatabaseService: Datos completos:', data);
-      
-      cache.clases = data.clases || [];
-      cache.alumnos = data.alumnos || {};
-      cache.registros = data.registros || {};
-      cache.loaded = true;
-      
-      console.log('🔍 DatabaseService: Caché actualizado:', {
-        clases: cache.clases,
-        numAlumnos: Object.keys(cache.alumnos).length,
-        numRegistros: Object.keys(cache.registros).length,
-        loaded: cache.loaded
+  loadInitialData() {
+    if (initialLoadPromise) return initialLoadPromise;
+
+    initialLoadPromise = new Promise((resolve, reject) => {
+      this.unsubscribeAll();
+      console.log('🔍 DatabaseService: Iniciando carga inicial de datos...');
+
+      const nodes = ['clases', 'alumnos', 'registros'];
+      const initialLoads = nodes.map(node => new Promise((nodeResolve, nodeReject) => {
+        const nodeRef = ref(db, `/${node}`);
+        const unsubscribe = onValue(nodeRef, (snapshot) => {
+          console.log(`🔍 DatabaseService: Datos recibidos para /${node}`);
+          cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
+          nodeResolve();
+        }, (error) => {
+          console.error(`❌ DatabaseService: Error en /${node}:`, error);
+          nodeReject(error);
+        });
+        unsubscribers.push(unsubscribe);
+      }));
+
+      Promise.all(initialLoads).then(() => {
+        cache.loaded = true;
+        console.log('✅ DatabaseService: Carga inicial de todos los nodos completada.');
+        resolve();
+      }).catch(error => {
+        console.error('❌ DatabaseService: Falló una de las cargas iniciales.');
+        reject(error);
       });
-      
-      if (onUpdate) onUpdate();
-    }, (error) => {
-      console.error('❌ DatabaseService: Error en suscripción:', error);
+    });
+
+    return initialLoadPromise;
+  },
+
+  subscribeToUpdates(onUpdate) {
+    // This assumes loadInitialData has already been called and populated the unsubscribers array
+    const nodes = ['clases', 'alumnos', 'registros'];
+    nodes.forEach(node => {
+        const nodeRef = ref(db, `/${node}`);
+        const unsubscribe = onValue(nodeRef, (snapshot) => {
+            console.log(`🔄 DatabaseService: Actualización recibida para /${node}`);
+            cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
+            if (onUpdate) onUpdate();
+        });
+        unsubscribers.push(unsubscribe);
     });
   },
 
   unsubscribeAll() {
-    if (unsubscribe) unsubscribe();
-    unsubscribe = null;
+    unsubscribers.forEach(unsub => unsub());
+    unsubscribers = [];
+    initialLoadPromise = null;
+    // Reset cache state
+    Object.assign(cache, {
+      clases: [],
+      alumnos: {},
+      registros: {},
+      loaded: false,
+    });
   },
 
   // Métodos para obtener datos de la caché
@@ -61,46 +89,6 @@ export const DatabaseService = {
   isLoaded() {
     console.log('🔍 DatabaseService.isLoaded():', cache.loaded);
     return cache.loaded;
-  },
-
-  // Nuevo método para verificar si realmente hay datos
-  hasRealData() {
-    const hasClases = cache.clases && cache.clases.length > 0;
-    const hasAlumnos = cache.alumnos && Object.keys(cache.alumnos).length > 0;
-    console.log('🔍 DatabaseService.hasRealData():', { 
-      loaded: cache.loaded, 
-      hasClases, 
-      hasAlumnos,
-      totalClases: cache.clases?.length || 0,
-      totalAlumnos: Object.keys(cache.alumnos || {}).length
-    });
-    return cache.loaded && hasClases && hasAlumnos;
-  },
-
-  // Método para esperar hasta que haya datos reales
-  waitForRealData(timeoutMs = 10000) {
-    return new Promise((resolve, reject) => {
-      const startTime = Date.now();
-      
-      const checkData = () => {
-        const elapsed = Date.now() - startTime;
-        console.log(`🔍 Esperando datos reales... ${elapsed}ms`);
-        
-        if (this.hasRealData()) {
-          console.log('✅ Datos reales disponibles');
-          return resolve();
-        }
-        
-        if (elapsed >= timeoutMs) {
-          console.warn('⚠️ Timeout esperando datos reales');
-          return reject(new Error('Timeout esperando datos'));
-        }
-        
-        setTimeout(checkData, 200);
-      };
-      
-      checkData();
-    });
   },
 
   // Escrituras
@@ -126,7 +114,11 @@ export const DatabaseService = {
     });
   },
   async borrarBaseDeDatos() {
-    await remove(ref(db));
+    const updates = {};
+    updates['/alumnos'] = null;
+    updates['/clases'] = null;
+    updates['/registros'] = null;
+    await update(ref(db), updates);
   },
 
   // Obtener todos los días lectivos (días con al menos una salida en cualquier clase)

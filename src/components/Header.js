@@ -12,6 +12,11 @@ export class Header {
       console.log('🔄 Usuario logueado - refrescando header...');
       setTimeout(() => this.refresh(), 100); // Pequeño delay para que AuthService se actualice
     });
+
+    window.addEventListener('admin-status-changed', () => {
+      console.log('👑 Admin status changed - refreshing header...');
+      this.refresh();
+    });
   }
 
   render() {
@@ -22,13 +27,12 @@ export class Header {
   renderHeader() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
-    const isAdmin = user ? RolesService.isAdmin(user.email) : false;
+    const isAdmin = AuthService.isAdmin;
     
     console.log('🔍 Header Debug:', { 
       user: user?.email, 
       userIdentifier, 
       isAdmin,
-      adminEmails: ['salvador.fernandez@salesianas.org', 'codocoderson@gmail.com'],
       authServiceCurrentUser: AuthService.currentUser?.email
     });
 
