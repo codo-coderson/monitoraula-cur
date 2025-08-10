@@ -42,6 +42,11 @@ class App {
         <div id="header"></div>
         <div id="tabs-nav"></div>
         <main id="main-content"></main>
+        <!-- Controles globales de tamaño de fuente -->
+        <div id="font-size-controls" style="display:none; position:fixed; bottom:1rem; right:1rem; z-index:1100; display:flex; flex-direction:column; gap:0.5rem;">
+          <button data-action="increase" style="width:40px;height:40px;border-radius:50%;background:var(--primary-color);color:#fff;border:none;cursor:pointer;font-size:var(--font-size-lg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.2);" title="Aumentar tamaño de letra">A+</button>
+          <button data-action="decrease" style="width:40px;height:40px;border-radius:50%;background:var(--primary-color);color:#fff;border:none;cursor:pointer;font-size:var(--font-size-base);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.2);" title="Reducir tamaño de letra">A-</button>
+        </div>
       `;
 
       this.mainContainer = document.getElementById('main-content');
@@ -182,6 +187,25 @@ class App {
         this.currentView.render(params.clase, params.alumnoId);
       } else {
         this.currentView.render();
+      }
+
+      // Mostrar / ocultar controles de tamaño de fuente
+      const controls = document.getElementById('font-size-controls');
+      if (['login','carga'].includes(vista)) {
+        controls.style.display = 'none';
+      } else {
+        controls.style.display = 'flex';
+      }
+
+      // Listeners de los botones (delegación simple)
+      if (!this._fontSizeControlsInit) {
+        this._fontSizeControlsInit = true;
+        controls.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-action]');
+          if (!btn) return;
+          const action = btn.getAttribute('data-action');
+          window.dispatchEvent(new CustomEvent('font-size-change', { detail: action }));
+        });
       }
 
       console.log(`✅ Vista ${vista} renderizada`);

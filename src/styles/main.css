@@ -97,6 +97,11 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Controles globales de tamaño de fuente */
+#font-size-controls button:hover {
+  background: var(--primary-dark);
+}
+
 /* Menú */
 .menu-container {
   opacity: 1 !important;

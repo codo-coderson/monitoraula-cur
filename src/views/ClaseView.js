@@ -28,55 +28,8 @@ export class ClaseView {
             font-weight: 600;
           ">Clase: ${this.formatearClase(clase)}</h2>
           <div id="alumnos-container"></div>
-          <!-- Espacio para los botones flotantes -->
-          <div style="height: calc(var(--alumno-card-height, 120px) * 2);"></div>
-          <!-- Botones de tamaño de fuente -->
-          <div style="
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-            z-index: 1000;
-          ">
-            <button
-              onclick="window.dispatchEvent(new CustomEvent('font-size-change', {detail: 'increase'}))"
-              style="
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                background: var(--primary-color);
-                color: white;
-                border: none;
-                cursor: pointer;
-                font-size: var(--font-size-lg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-              "
-              title="Aumentar tamaño de letra"
-            >A+</button>
-            <button
-              onclick="window.dispatchEvent(new CustomEvent('font-size-change', {detail: 'decrease'}))"
-              style="
-                width: 40px;
-                height: 40px;
-                border-radius: 50%;
-                background: var(--primary-color);
-                color: white;
-                border: none;
-                cursor: pointer;
-                font-size: var(--font-size-base);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-              "
-              title="Reducir tamaño de letra"
-            >A-</button>
-          </div>
+          <!-- Espacio inferior para no tapar contenido con controles globales -->
+          <div style="height: 4rem;"></div>
         </div>
       `;
 

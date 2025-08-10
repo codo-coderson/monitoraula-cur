@@ -32,8 +32,8 @@ export class InformeView {
           ${this.generarGrafico(registros)}
         </div>
 
-        <!-- Espacio para el botón flotante -->
-        <div style="height: calc(var(--alumno-card-height, 120px));"></div>
+  <!-- Espacio inferior para controles flotantes (volver + tamaño de fuente) -->
+  <div style="height: 5.5rem;"></div>
 
         <!-- Botón Volver -->
         <button
@@ -41,7 +41,7 @@ export class InformeView {
           style="
             position: fixed;
             bottom: 1rem;
-            right: 1rem;
+            right: 4.5rem; /* dejar sitio para controles de font-size */
             padding: 0.75rem 1.25rem;
             background: var(--primary-color);
             color: white;
@@ -53,7 +53,7 @@ export class InformeView {
             display: flex;
             align-items: center;
             gap: 0.5rem;
-            z-index: 1000;
+            z-index: 1050; /* por debajo de los controles de font-size (1100) */
           "
         >
           <span>🔙</span> Volver

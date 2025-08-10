@@ -1,6 +1,6 @@
 const STORAGE_KEY = 'monitoraula_font_size';
 const DEFAULT_SIZE = 14;
-const MIN_SIZE = 10;
+const MIN_SIZE = 8; // reducido para permitir tamaño más pequeño
 const MAX_SIZE = 20;
 const STEP = 1;
 
