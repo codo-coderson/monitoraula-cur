@@ -110,8 +110,7 @@ export class Header {
                 cursor: pointer;
                 border-bottom: 1px solid #eee;
                 transition: background 0.2s;
-                color: var(--danger-color);
-              ">🗑️ Borrar la BD</div>
+              ">⚠️ Borrar la BD</div>
               ${isSuperAdminEmail ? `
                 <div class="menu-item" data-action="adminBD" style="
                   padding: 0.7rem 1rem;
