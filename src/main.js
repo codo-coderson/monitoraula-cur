@@ -6,6 +6,7 @@ import { ClaseView } from './views/ClaseView.js';
 import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
 import { InformeView } from './views/InformeView.js';
+import { AdminBDView } from './views/AdminBDView.js';
 import { LoadingComponent } from './components/Loading.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
@@ -64,6 +65,7 @@ class App {
         clase: new ClaseView(this.mainContainer),
         carga: new CargaAlumnosView(this.mainContainer),
         informe: new InformeView(this.mainContainer)
+  , adminbd: new AdminBDView(this.mainContainer)
       };
       console.log('✅ Vistas inicializadas');
 
@@ -143,6 +145,16 @@ class App {
       if (!AuthService.isAuthenticated() && vista !== 'login') {
         vista = 'login';
         params = {};
+      }
+
+      // Restringir vista adminbd a usuario específico
+      if (vista === 'adminbd') {
+        const user = AuthService.getCurrentUser();
+        const allowed = user?.email === 'salvador.fernandez@salesianas.org';
+        if (!allowed) {
+          console.warn('Acceso denegado a Administración BD');
+          vista = 'clase';
+        }
       }
 
       const header = document.getElementById('header');

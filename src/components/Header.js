@@ -27,7 +27,8 @@ export class Header {
   renderHeader() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
-    const isAdmin = AuthService.isAdmin;
+  const isAdmin = AuthService.isAdmin;
+  const isSuperAdminEmail = user?.email === 'salvador.fernandez@salesianas.org';
     
     console.log('🔍 Header Debug:', { 
       user: user?.email, 
@@ -111,6 +112,14 @@ export class Header {
                 transition: background 0.2s;
                 color: var(--danger-color);
               ">🗑️ Borrar la BD</div>
+              ${isSuperAdminEmail ? `
+                <div class="menu-item" data-action="adminBD" style="
+                  padding: 0.7rem 1rem;
+                  cursor: pointer;
+                  border-bottom: 1px solid #eee;
+                  transition: background 0.2s;
+                ">🛠️ Administración BD</div>
+              ` : ''}
             ` : ''}
             <div class="menu-item" data-action="logout" style="
               padding: 0.7rem 1rem;
@@ -204,6 +213,11 @@ export class Header {
                 }
               }
             }
+            break;
+          case 'adminBD':
+            window.dispatchEvent(new CustomEvent('navegacion', {
+              detail: { vista: 'adminbd' }
+            }));
             break;
           
           case 'logout':
