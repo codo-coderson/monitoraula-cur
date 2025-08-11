@@ -28,10 +28,10 @@ export class AdminBDView {
             ➕ Dar de alta un nuevo alumno
             <div style="font-size: var(--font-size-sm); color: var(--gray-600); font-weight:400; margin-top:0.25rem;">Inserta manualmente la entrada correspondiente dentro de <code>alumnos</code>.</div>
           </a>
-          <a href="https://console.firebase.google.com/project/monitoraula-cur/authentication/usage/current-billing?hl=es-419" target="_blank" rel="noopener noreferrer" style="
+          <a href="https://console.firebase.google.com/u/0/project/monitoraula-cur/database/usage/current-billing/connections?hl=es-419" target="_blank" rel="noopener noreferrer" style="
             display: block; padding: 1rem 1.25rem; background:#fff; border:1px solid var(--gray-300); border-radius:8px; text-decoration:none; color: var(--primary-color); font-weight:500;">
             📈 Ver métricas de la base de datos
-            <div style="font-size: var(--font-size-sm); color: var(--gray-600); font-weight:400; margin-top:0.25rem;">Uso y facturación de autenticación / base de datos.</div>
+            <div style="font-size: var(--font-size-sm); color: var(--gray-600); font-weight:400; margin-top:0.25rem;">Uso y facturación de la base de datos.</div>
           </a>
         </div>
       </div>
