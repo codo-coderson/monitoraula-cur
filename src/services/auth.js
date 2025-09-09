@@ -3,16 +3,11 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  setPersistence,
-  browserLocalPersistence,
   sendPasswordResetEmail
 } from 'firebase/auth';
 import { onValue, ref } from 'firebase/database';
 import { RolesService } from './roles.js';
 import { auth, db } from '../config/firebase';
-
-// Configurar persistencia local (equivalente a una cookie)
-setPersistence(auth, browserLocalPersistence);
 
 export const AuthService = {
   // Estado actual del usuario
@@ -20,13 +15,16 @@ export const AuthService = {
   isAdmin: false,
   lastVisitedClass: null,
   adminListenerUnsubscribe: null,
+  authStateUnsubscribe: null,
 
   // Inicializar el servicio de autenticación
   init() {
     return new Promise((resolve) => {
+      // Listen for auth state changes to handle persistent login
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        unsubscribe(); // We only need the initial state once.
+        const wasInitialized = this.currentUser !== null || !user;
         this.currentUser = user;
+        
         if (user) {
           await this.updateAdminStatus();
           this.listenForAdminChanges();
@@ -38,8 +36,15 @@ export const AuthService = {
             this.adminListenerUnsubscribe();
           }
         }
-        resolve(user);
+        
+        // Only resolve on the first call to prevent multiple initializations
+        if (!wasInitialized) {
+          resolve(user);
+        }
       });
+      
+      // Store the unsubscribe function to clean up later if needed
+      this.authStateUnsubscribe = unsubscribe;
     });
   },
 
@@ -81,6 +86,9 @@ export const AuthService = {
     try {
       if (this.adminListenerUnsubscribe) {
         this.adminListenerUnsubscribe();
+      }
+      if (this.authStateUnsubscribe) {
+        this.authStateUnsubscribe();
       }
       await signOut(auth);
       this.currentUser = null;

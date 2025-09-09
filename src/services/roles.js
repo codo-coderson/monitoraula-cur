@@ -72,10 +72,25 @@ export const RolesService = {
     this.invalidateAdminCache();
   },
 
-  async getLastVisitedClass(uid) {
-    if (!uid) return null;
-    const email = await this._fetchUserEmail(uid);
+  async getLastVisitedClass(email) {
     if (!email) return null;
+
+    try {
+      const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
+      const snapshot = await get(userPrefsRef);
+      if (snapshot.exists()) {
+        const prefs = snapshot.val();
+        return prefs.lastClass || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error al obtener la última clase visitada:', error);
+      return null;
+    }
+  },
+
+  async setLastVisitedClass(email, className) {
+    if (!email || !className) return;
 
     try {
       const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
