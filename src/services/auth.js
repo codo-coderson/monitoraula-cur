@@ -93,12 +93,8 @@ export const AuthService = {
           
           // Load admin status and last visited class
           try {
-            await Promise.all([
-              this.updateAdminStatus(),
-              RolesService.getLastVisitedClass(auth.currentUser.email).then(lastClass => {
-                this.lastVisitedClass = lastClass;
-              })
-            ]);
+            await this.updateAdminStatus();
+            this.lastVisitedClass = await RolesService.getLastVisitedClass(auth.currentUser.email);
             this.listenForAdminChanges();
           } catch (statusError) {
             console.warn('⚠️ Error cargando estado del usuario:', statusError);
@@ -183,13 +179,23 @@ export const AuthService = {
 
   async updateAdminStatus() {
     try {
+      // Force a fresh check of admin status
+      RolesService.invalidateAdminCache();
       const wasAdmin = this.isAdmin;
       this.isAdmin = await RolesService.isAdmin(this.currentUser);
+      
+      console.log('🔍 Admin status check:', {
+        user: this.currentUser?.email,
+        wasAdmin,
+        isAdmin: this.isAdmin
+      });
+      
       if (wasAdmin !== this.isAdmin) {
+        console.log('🔄 Admin status changed, dispatching event');
         window.dispatchEvent(new CustomEvent('admin-status-changed'));
       }
     } catch (error) {
-      console.error('Error actualizando estado de admin:', error);
+      console.error('❌ Error actualizando estado de admin:', error);
       this.isAdmin = false;
     }
   },
@@ -199,13 +205,30 @@ export const AuthService = {
       if (this.adminListenerUnsubscribe) {
         this.adminListenerUnsubscribe();
       }
+      
+      // Listen for changes in both fixed and designated admins
+      const fixedAdminsRef = ref(db, 'fixed_admins');
       const designatedAdminsRef = ref(db, 'designated_admins');
-      this.adminListenerUnsubscribe = onValue(designatedAdminsRef, () => {
+      
+      const handleAdminChange = () => {
+        console.log('🔄 Cambios detectados en admins, actualizando estado...');
         RolesService.invalidateAdminCache();
         this.updateAdminStatus();
-      });
+      };
+      
+      // Set up listeners for both paths
+      const unsubFixed = onValue(fixedAdminsRef, handleAdminChange);
+      const unsubDesignated = onValue(designatedAdminsRef, handleAdminChange);
+      
+      // Store unsubscribe function that cleans up both listeners
+      this.adminListenerUnsubscribe = () => {
+        unsubFixed();
+        unsubDesignated();
+      };
+      
+      console.log('✅ Listeners de admin configurados');
     } catch (error) {
-      console.error('Error configurando listener de admin:', error);
+      console.error('❌ Error configurando listeners de admin:', error);
     }
   },
 
@@ -215,14 +238,19 @@ export const AuthService = {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
       
-      // Try to get admin status but don't fail if it errors
-      try {
-        this.isAdmin = await RolesService.isAdmin(userCredential.user.uid);
-        this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
-      } catch (roleError) {
-        console.warn('⚠️ Error obteniendo roles:', roleError);
-        this.isAdmin = false;
-      }
+      // Force a fresh check of admin status
+      RolesService.invalidateAdminCache();
+      this.isAdmin = await RolesService.isAdmin(userCredential.user);
+      this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
+      
+      console.log('✅ Login exitoso:', {
+        user: email,
+        isAdmin: this.isAdmin,
+        lastClass: this.lastVisitedClass
+      });
+      
+      // Set up admin change listeners
+      this.listenForAdminChanges();
       
       // Save credentials for future auto-login (unless it's an auto-login attempt)
       if (saveCredentials) {
@@ -231,7 +259,7 @@ export const AuthService = {
       
       return userCredential.user;
     } catch (error) {
-      console.error('Error al iniciar sesión:', error);
+      console.error('❌ Error al iniciar sesión:', error);
       throw this.translateError(error);
     }
   },
@@ -253,8 +281,10 @@ export const AuthService = {
       this.currentUser = null;
       this.isAdmin = false;
       this.lastVisitedClass = null;
+      
+      console.log('✅ Sesión cerrada correctamente');
     } catch (error) {
-      console.error('Error al cerrar sesión:', error);
+      console.error('❌ Error al cerrar sesión:', error);
       throw this.translateError(error);
     }
   },

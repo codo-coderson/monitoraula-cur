@@ -6,29 +6,34 @@ let userEmailCache = {}; // Cache for mapping UID to email for getLastVisitedCla
 
 export const RolesService = {
   async _fetchAdminUids() {
-    if (adminUids) {
-      return adminUids;
-    }
-
-    // Fetch fixed admins
-    const fixedAdminsRef = ref(db, 'fixed_admins');
-    const fixedAdminsSnap = await get(fixedAdminsRef);
-    const fixedAdmins = fixedAdminsSnap.exists() ? fixedAdminsSnap.val() : {};
-
-    // Fetch designated admins
     try {
+      // Always fetch fresh admin data to avoid stale cache issues
+      console.log('🔍 Fetching admin UIDs...');
+
+      // Fetch fixed admins
+      const fixedAdminsRef = ref(db, 'fixed_admins');
+      const fixedAdminsSnap = await get(fixedAdminsRef);
+      const fixedAdmins = fixedAdminsSnap.exists() ? fixedAdminsSnap.val() : {};
+      console.log('✅ Fixed admins:', Object.keys(fixedAdmins));
+
+      // Fetch designated admins
       const designatedAdminsRef = ref(db, 'designated_admins');
       const designatedAdminsSnap = await get(designatedAdminsRef);
       const designatedAdmins = designatedAdminsSnap.exists() ? designatedAdminsSnap.val() : {};
+      console.log('✅ Designated admins:', Object.keys(designatedAdmins));
 
       // Combine and get UIDs
-      adminUids = [...Object.keys(fixedAdmins), ...Object.keys(designatedAdmins)];
+      const combinedUids = [...Object.keys(fixedAdmins), ...Object.keys(designatedAdmins)];
+      console.log('✅ Combined admin UIDs:', combinedUids);
+
+      // Update cache
+      adminUids = combinedUids;
       return adminUids;
     } catch (error) {
-      console.error("Error fetching designated admins:", error);
-      // If there's an error fetching designated admins, we'll just use fixed admins
-      adminUids = Object.keys(fixedAdmins);
-      return adminUids;
+      console.error("❌ Error fetching admin UIDs:", error);
+      // On error, invalidate cache to force fresh fetch next time
+      this.invalidateAdminCache();
+      return [];
     }
   },
 
@@ -52,31 +57,51 @@ export const RolesService = {
   },
 
   async isAdmin(user) {
-    if (!user || !user.uid) {
+    try {
+      if (!user || !user.uid) {
+        console.log('❌ No user or uid provided for admin check');
+        return false;
+      }
+
+      // Always fetch fresh admin data
+      const uids = await this._fetchAdminUids();
+      const isAdmin = uids.includes(user.uid);
+      
+      console.log(`🔍 Admin check for ${user.email} (${user.uid}):`, isAdmin);
+      return isAdmin;
+    } catch (error) {
+      console.error('❌ Error checking admin status:', error);
       return false;
     }
-    const uids = await this._fetchAdminUids();
-    return uids.includes(user.uid);
   },
 
   invalidateAdminCache() {
+    console.log('🔄 Invalidating admin cache');
     adminUids = null;
+    userEmailCache = {};
   },
 
   async addAdmin(uid) {
     if (!uid) {
       throw new Error("UID is required to add an admin.");
     }
-    const designatedAdminsRef = ref(db, `designated_admins/${uid}`);
-    await set(designatedAdminsRef, true); // Set to true or any value to indicate presence
-    this.invalidateAdminCache();
+    try {
+      const designatedAdminsRef = ref(db, `designated_admins/${uid}`);
+      await set(designatedAdminsRef, true);
+      console.log('✅ Added new admin:', uid);
+      this.invalidateAdminCache();
+    } catch (error) {
+      console.error('❌ Error adding admin:', error);
+      throw error;
+    }
   },
 
   async getLastVisitedClass(email) {
     if (!email) return null;
 
     try {
-      const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
+      const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+      const userPrefsRef = ref(db, `userPreferences/${sanitizedEmail}`);
       const snapshot = await get(userPrefsRef);
       if (snapshot.exists()) {
         const prefs = snapshot.val();
@@ -84,7 +109,7 @@ export const RolesService = {
       }
       return null;
     } catch (error) {
-      console.error('Error al obtener la última clase visitada:', error);
+      console.error('❌ Error al obtener la última clase visitada:', error);
       return null;
     }
   },
@@ -93,13 +118,15 @@ export const RolesService = {
     if (!email || !className) return;
 
     try {
-      const userPrefsRef = ref(db, `userPreferences/${email.replace(/[.#$[\]]/g, '_')}`);
+      const sanitizedEmail = email.replace(/[.#$[\]]/g, '_');
+      const userPrefsRef = ref(db, `userPreferences/${sanitizedEmail}`);
       await set(userPrefsRef, {
         lastClass: className,
         lastVisit: new Date().toISOString()
       });
+      console.log('✅ Updated last visited class:', { email, className });
     } catch (error) {
-      console.error('Error al guardar la última clase visitada:', error);
+      console.error('❌ Error al guardar la última clase visitada:', error);
     }
   }
-}; 
+};
