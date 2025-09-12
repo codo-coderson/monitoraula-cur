@@ -21,9 +21,12 @@ export class CargaAlumnosView {
           <h3 style="margin-top: 0; margin-bottom: 1rem;">Instrucciones</h3>
           <p>El archivo Excel debe tener las siguientes columnas:</p>
           <ul>
-            <li>"Alumno": Nombre completo del alumno</li>
-            <li>"Curso": Identificador del curso</li>
+            <li><strong>"Alumno"</strong> o <strong>"Nombre"</strong>: Nombre completo del alumno</li>
+            <li><strong>"Curso"</strong> o <strong>"Clase"</strong>: Identificador del curso</li>
           </ul>
+          <p style="color: #666; margin-top: 1rem;">
+            ℹ️ El sistema acepta archivos .xlsx y .xls. Las columnas pueden estar en mayúsculas o minúsculas.
+          </p>
           <p style="color: #dc3545; margin-top: 1rem;">
             ⚠️ ATENCIÓN: La carga de un nuevo archivo eliminará todos los datos anteriores.
           </p>
@@ -44,6 +47,26 @@ export class CargaAlumnosView {
               border-radius: 4px;
             "
           />
+          
+          <div id="errorContainer" style="
+            display: none;
+            padding: 1rem;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 4px;
+            color: #721c24;
+            margin-bottom: 1rem;
+          "></div>
+          
+          <div id="successContainer" style="
+            display: none;
+            padding: 1rem;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 4px;
+            color: #155724;
+            margin-bottom: 1rem;
+          "></div>
           
           <div style="display: flex; gap: 1rem;">
             <button 
@@ -81,24 +104,69 @@ export class CargaAlumnosView {
       </div>
     `;
 
+    const errorContainer = document.getElementById('errorContainer');
+    const successContainer = document.getElementById('successContainer');
+    
+    const showError = (message) => {
+      errorContainer.style.display = 'block';
+      errorContainer.innerHTML = `<strong>Error:</strong> ${message}`;
+      successContainer.style.display = 'none';
+    };
+    
+    const showSuccess = (message) => {
+      successContainer.style.display = 'block';
+      successContainer.innerHTML = `<strong>✅ Éxito:</strong> ${message}`;
+      errorContainer.style.display = 'none';
+    };
+    
+    const hideMessages = () => {
+      errorContainer.style.display = 'none';
+      successContainer.style.display = 'none';
+    };
+
     // Eventos
     document.getElementById('btnCargar').onclick = async () => {
       const fileInput = document.getElementById('fileAlumnos');
+      const btnCargar = document.getElementById('btnCargar');
+      
+      hideMessages();
+      
       if (fileInput.files.length === 0) {
-        alert('Por favor, selecciona un archivo Excel.');
+        showError('Por favor, selecciona un archivo Excel.');
         return;
       }
 
+      const file = fileInput.files[0];
+      console.log('📁 Archivo seleccionado:', file.name, 'Tamaño:', file.size, 'Tipo:', file.type);
+
       try {
+        // Deshabilitar botón durante el proceso
+        btnCargar.disabled = true;
+        btnCargar.textContent = 'Procesando...';
+        
         // Mostrar loading
         this.mostrarLoading('Procesando archivo Excel...');
 
-        // Parsear Excel
-        const data = await ExcelUtils.parseExcelFile(fileInput.files[0]);
+        // Parsear Excel con mejor manejo de errores
+        let data;
+        try {
+          data = await ExcelUtils.parseExcelFile(file);
+          console.log(`✅ Archivo procesado: ${data.length} registros encontrados`);
+        } catch (parseError) {
+          console.error('Error al parsear Excel:', parseError);
+          throw new Error(parseError.message || 'No se pudo leer el archivo Excel. Verifica que el formato sea correcto.');
+        }
         
-        // Confirmar acción
-        if (!confirm('ATENCIÓN: Esto BORRARÁ TODA la base de datos. ¿Desea continuar?')) {
+        // Mostrar resumen de datos encontrados
+        const clases = [...new Set(data.map(row => row.Curso))];
+        const mensaje = `Se encontraron ${data.length} alumnos en ${clases.length} clases.\n\nClases: ${clases.join(', ')}`;
+        
+        // Confirmar acción con más detalles
+        if (!confirm(`${mensaje}\n\n⚠️ ATENCIÓN: Esto BORRARÁ TODA la base de datos actual.\n\n¿Desea continuar?`)) {
           this.ocultarLoading();
+          btnCargar.disabled = false;
+          btnCargar.textContent = 'Cargar Alumnos';
+          showSuccess('Operación cancelada por el usuario.');
           return;
         }
 
@@ -106,19 +174,32 @@ export class CargaAlumnosView {
         this.mostrarLoading('Actualizando base de datos...');
 
         // Cargar datos
-        await DatabaseService.borrarBaseDeDatos();
-        await DatabaseService.cargarAlumnosDesdeExcel(data);
-
-        this.ocultarLoading();
-        alert('Datos cargados correctamente.');
-        
-        // Volver al menú
-        window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'menu' } }));
+        try {
+          await DatabaseService.borrarBaseDeDatos();
+          console.log('✅ Base de datos borrada');
+          
+          await DatabaseService.cargarAlumnosDesdeExcel(data);
+          console.log('✅ Nuevos datos cargados');
+          
+          this.ocultarLoading();
+          showSuccess(`Datos cargados correctamente: ${data.length} alumnos en ${clases.length} clases.`);
+          
+          // Esperar un momento antes de navegar
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'menu' } }));
+          }, 2000);
+        } catch (dbError) {
+          console.error('Error al actualizar base de datos:', dbError);
+          throw new Error('Error al actualizar la base de datos. Por favor, intenta de nuevo.');
+        }
 
       } catch (error) {
+        console.error('❌ Error en el proceso de carga:', error);
         this.ocultarLoading();
-        alert('Error al procesar el archivo: ' + error.message);
+        showError(error.message || 'Error desconocido al procesar el archivo.');
       } finally {
+        btnCargar.disabled = false;
+        btnCargar.textContent = 'Cargar Alumnos';
         this.ocultarLoading();
       }
     };
@@ -126,9 +207,17 @@ export class CargaAlumnosView {
     document.getElementById('btnVolver').onclick = () => {
       window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'menu' } }));
     };
+    
+    // Clear messages when selecting a new file
+    document.getElementById('fileAlumnos').onchange = () => {
+      hideMessages();
+    };
   }
 
   mostrarLoading(mensaje) {
+    // Remove any existing overlay first
+    this.ocultarLoading();
+    
     const overlay = document.createElement('div');
     overlay.id = 'loadingOverlay';
     overlay.style.cssText = `
@@ -150,9 +239,10 @@ export class CargaAlumnosView {
       padding: 2rem;
       border-radius: 8px;
       text-align: center;
+      min-width: 250px;
     `;
     box.innerHTML = `
-      <div style="margin-bottom: 1rem;">${mensaje}</div>
+      <div style="margin-bottom: 1rem; font-size: 1.1rem;">${mensaje}</div>
       <div class="spinner"></div>
     `;
 
@@ -166,4 +256,4 @@ export class CargaAlumnosView {
       document.body.removeChild(overlay);
     }
   }
-} 
+}

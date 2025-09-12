@@ -64,8 +64,8 @@ class App {
         menu: new MenuView(this.mainContainer),
         clase: new ClaseView(this.mainContainer),
         carga: new CargaAlumnosView(this.mainContainer),
-        informe: new InformeView(this.mainContainer)
-  , adminbd: new AdminBDView(this.mainContainer)
+        informe: new InformeView(this.mainContainer),
+        adminbd: new AdminBDView(this.mainContainer)
       };
       console.log('✅ Vistas inicializadas');
 
@@ -87,17 +87,39 @@ class App {
   async iniciar() {
     this.header.render();
 
-    // Comprobar si ya hay un usuario logueado
-    await AuthService.init();
+    // Show loading while checking authentication
+    this.loadingComponent.render('Verificando sesión...');
 
-    if (AuthService.isAuthenticated()) {
-      // Si ya está logueado, cargar datos y navegar
-      this.loadingComponent.render('Cargando datos...');
-      await DatabaseService.loadInitialData();
-      this.initialNavigationDone = true;
-      this.navegarDirecto();
-    } else {
-      // Si no, mostrar la pantalla de login
+    try {
+      // Initialize auth service (this will try auto-login with saved credentials)
+      await AuthService.init();
+
+      if (AuthService.isAuthenticated()) {
+        console.log('✅ Usuario autenticado:', AuthService.getCurrentUser()?.email);
+        
+        // Update loading message
+        this.loadingComponent.render('Cargando datos...');
+        
+        // Load database data
+        await DatabaseService.loadInitialData();
+        
+        // Ensure we have valid data before proceeding
+        const clases = DatabaseService.getClases();
+        console.log('📚 Clases disponibles:', clases);
+        
+        this.initialNavigationDone = true;
+        
+        // Navigate to the appropriate view
+        this.navegarDirecto();
+      } else {
+        console.log('ℹ️ No hay usuario autenticado, mostrando login');
+        // If not authenticated, show login screen
+        this.initialNavigationDone = true;
+        this.navegarA('login');
+      }
+    } catch (error) {
+      console.error('❌ Error durante inicialización:', error);
+      // On error, show login screen
       this.initialNavigationDone = true;
       this.navegarA('login');
     }
@@ -105,6 +127,7 @@ class App {
 
   // Navega a la vista principal una vez que los datos están listos
   navegarDirecto() {
+    // Subscribe to data updates
     const onDataUpdate = () => {
       if (this.currentView) {
         if (this.currentView === this.views.clase) {
@@ -120,17 +143,27 @@ class App {
     };
     DatabaseService.subscribeToUpdates(onDataUpdate);
 
+    // Refresh header with user info
     this.header.refresh();
+    
+    // Clean up old records
     CleanupService.limpiarRegistrosAntiguos();
 
     const clases = DatabaseService.getClases();
+    console.log('🎯 Navegando directo, clases disponibles:', clases);
+    
     if (clases && clases.length > 0) {
+      // Determine initial class to show
       const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass))
         ? AuthService.lastVisitedClass
         : clases[0];
+      
+      console.log('📍 Navegando a clase inicial:', claseInicial);
       this.navegarA('clase', { clase: claseInicial });
     } else {
+      console.warn('⚠️ No hay clases disponibles');
       if (AuthService.isAdmin) {
+        console.log('👤 Usuario es admin, navegando a carga de alumnos');
         this.navegarA('carga');
       } else {
         alert('La base de datos de alumnos está vacía. Contacta con un administrador.');
@@ -142,12 +175,14 @@ class App {
 
   navegarA(vista, params = {}) {
     try {
+      // Check authentication for protected views
       if (!AuthService.isAuthenticated() && vista !== 'login') {
+        console.log('⚠️ Usuario no autenticado, redirigiendo a login');
         vista = 'login';
         params = {};
       }
 
-      // Restringir vista adminbd a usuario específico
+      // Restrict adminbd view to specific user
       if (vista === 'adminbd') {
         const user = AuthService.getCurrentUser();
         const allowed = user?.email === 'salvador.fernandez@salesianas.org';
@@ -160,11 +195,16 @@ class App {
       const header = document.getElementById('header');
       const tabsNav = document.getElementById('tabs-nav');
 
+      // Handle UI visibility based on view
       if (vista === 'login') {
         header.style.display = 'none';
         tabsNav.style.display = 'none';
       } else {
         header.style.display = 'block';
+        
+        // Update header to show current user
+        this.header.refresh();
+        
         if (vista === 'clase') {
           const clases = DatabaseService.getClases();
           if (clases && clases.length > 0) {
@@ -179,6 +219,11 @@ class App {
             this.tabsNav.claseActual = params.clase;
             this.tabsNav.render();
             tabsNav.style.display = 'block';
+            
+            // Save last visited class
+            if (params.clase) {
+              AuthService.updateLastVisitedClass(params.clase);
+            }
           } else {
             tabsNav.style.display = 'none';
           }
@@ -193,6 +238,7 @@ class App {
 
       if (!this.currentView) throw new Error(`Vista "${vista}" no encontrada`);
 
+      // Render the view with appropriate parameters
       if (vista === 'clase') {
         this.currentView.render(params.clase);
       } else if (vista === 'informe') {
@@ -201,7 +247,7 @@ class App {
         this.currentView.render();
       }
 
-      // Mostrar / ocultar controles de tamaño de fuente
+      // Show/hide font size controls
       const controls = document.getElementById('font-size-controls');
       if (['login','carga'].includes(vista)) {
         controls.style.display = 'none';
@@ -209,7 +255,7 @@ class App {
         controls.style.display = 'flex';
       }
 
-      // Listeners de los botones (delegación simple)
+      // Initialize font size control listeners (only once)
       if (!this._fontSizeControlsInit) {
         this._fontSizeControlsInit = true;
         controls.addEventListener('click', (e) => {

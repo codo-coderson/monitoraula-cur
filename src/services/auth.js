@@ -9,6 +9,19 @@ import { onValue, ref } from 'firebase/database';
 import { RolesService } from './roles.js';
 import { auth, db } from '../config/firebase';
 
+// Simple encryption/decryption for credentials (not military-grade but sufficient for lazy users)
+const encryptData = (text) => {
+  return btoa(text);
+};
+
+const decryptData = (text) => {
+  try {
+    return atob(text);
+  } catch {
+    return null;
+  }
+};
+
 export const AuthService = {
   // Estado actual del usuario
   currentUser: null,
@@ -17,9 +30,70 @@ export const AuthService = {
   adminListenerUnsubscribe: null,
   authStateUnsubscribe: null,
 
+  // Save credentials to localStorage
+  saveCredentials(email, password) {
+    try {
+      const credentials = {
+        email: encryptData(email),
+        password: encryptData(password),
+        timestamp: Date.now()
+      };
+      localStorage.setItem('monitoraula_creds', JSON.stringify(credentials));
+      console.log('✅ Credenciales guardadas en localStorage');
+    } catch (error) {
+      console.error('Error guardando credenciales:', error);
+    }
+  },
+
+  // Get saved credentials from localStorage
+  getSavedCredentials() {
+    try {
+      const stored = localStorage.getItem('monitoraula_creds');
+      if (!stored) return null;
+      
+      const credentials = JSON.parse(stored);
+      const email = decryptData(credentials.email);
+      const password = decryptData(credentials.password);
+      
+      if (email && password) {
+        console.log('✅ Credenciales recuperadas de localStorage');
+        return { email, password };
+      }
+    } catch (error) {
+      console.error('Error recuperando credenciales:', error);
+    }
+    return null;
+  },
+
+  // Clear saved credentials
+  clearSavedCredentials() {
+    try {
+      localStorage.removeItem('monitoraula_creds');
+      console.log('✅ Credenciales eliminadas de localStorage');
+    } catch (error) {
+      console.error('Error eliminando credenciales:', error);
+    }
+  },
+
   // Inicializar el servicio de autenticación
-  init() {
-    return new Promise((resolve) => {
+  async init() {
+    return new Promise(async (resolve) => {
+      // First, try to login with saved credentials if available
+      const savedCreds = this.getSavedCredentials();
+      let autoLoginSuccessful = false;
+      
+      if (savedCreds && !auth.currentUser) {
+        console.log('🔄 Intentando auto-login con credenciales guardadas...');
+        try {
+          await this.login(savedCreds.email, savedCreds.password, false);
+          autoLoginSuccessful = true;
+          console.log('✅ Auto-login exitoso');
+        } catch (error) {
+          console.error('❌ Auto-login falló:', error);
+          this.clearSavedCredentials();
+        }
+      }
+
       // Listen for auth state changes to handle persistent login
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
         const wasInitialized = this.currentUser !== null || !user;
@@ -38,7 +112,7 @@ export const AuthService = {
         }
         
         // Only resolve on the first call to prevent multiple initializations
-        if (!wasInitialized) {
+        if (!wasInitialized || autoLoginSuccessful) {
           resolve(user);
         }
       });
@@ -68,12 +142,18 @@ export const AuthService = {
   },
 
   // Iniciar sesión
-  async login(email, password) {
+  async login(email, password, saveCredentials = true) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
       this.isAdmin = await RolesService.isAdmin(userCredential.user.uid);
       this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
+      
+      // Save credentials for future auto-login (unless it's an auto-login attempt)
+      if (saveCredentials) {
+        this.saveCredentials(email, password);
+      }
+      
       return userCredential.user;
     } catch (error) {
       console.error('Error al iniciar sesión:', error);
@@ -90,6 +170,10 @@ export const AuthService = {
       if (this.authStateUnsubscribe) {
         this.authStateUnsubscribe();
       }
+      
+      // Clear saved credentials on logout
+      this.clearSavedCredentials();
+      
       await signOut(auth);
       this.currentUser = null;
       this.isAdmin = false;
@@ -140,9 +224,10 @@ export const AuthService = {
       'auth/weak-password': 'La contraseña es demasiado débil',
       'auth/network-request-failed': 'Error de conexión. Verifica tu conexión a internet',
       'auth/too-many-requests': 'Demasiados intentos fallidos. Intenta más tarde',
-      'auth/requires-recent-login': 'Por seguridad, vuelve a iniciar sesión'
+      'auth/requires-recent-login': 'Por seguridad, vuelve a iniciar sesión',
+      'auth/invalid-credential': 'Las credenciales son incorrectas'
     };
 
     return new Error(errorMessages[error.code] || error.message);
   }
-}; 
+};
