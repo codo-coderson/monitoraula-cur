@@ -8,10 +8,29 @@ export const ExcelUtils = {
       reader.onload = function(e) {
         try {
           console.log('📊 Procesando archivo Excel...');
-          const data = e.target.result;
+          const fileData = e.target.result;
           
-          // Try reading as array buffer instead of binary string for better compatibility
-          const workbook = XLSX.read(data, { type: 'array' });
+          // Configure XLSX to be more tolerant of different file formats
+          const options = {
+            type: 'array',
+            cellDates: true,
+            cellNF: false,
+            cellText: false
+          };
+
+          // For mobile Safari compatibility
+          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
+            options.type = 'base64';
+          }
+          
+          let workbook;
+          try {
+            workbook = XLSX.read(fileData, options);
+          } catch (readError) {
+            console.error('Error en primera lectura, intentando alternativa:', readError);
+            // Try alternative reading method for mobile
+            workbook = XLSX.read(btoa(fileData), { type: 'base64' });
+          }
           
           console.log('📊 Hojas disponibles:', workbook.SheetNames);
           
@@ -30,7 +49,8 @@ export const ExcelUtils = {
           const json = XLSX.utils.sheet_to_json(sheet, {
             raw: false, // Use formatted strings
             defval: '', // Default value for empty cells
-            blankrows: false // Skip blank rows
+            blankrows: false, // Skip blank rows
+            header: 1 // Generate headers from first row
           });
           
           console.log(`📊 Filas encontradas: ${json.length}`);
@@ -39,65 +59,46 @@ export const ExcelUtils = {
             throw new Error('El archivo Excel no contiene datos');
           }
           
-          // Log first row to debug column names
-          console.log('📊 Primera fila (muestra):', json[0]);
-          console.log('📊 Columnas detectadas:', Object.keys(json[0] || {}));
+          // Get headers from first row
+          const headers = json[0].map(h => String(h).trim());
+          console.log('📊 Encabezados encontrados:', headers);
           
-          // Validar estructura del Excel - be more flexible with column names
-          const firstRow = json[0];
-          const hasAlumno = firstRow && (
-            firstRow.hasOwnProperty('Alumno') || 
-            firstRow.hasOwnProperty('alumno') || 
-            firstRow.hasOwnProperty('ALUMNO') ||
-            firstRow.hasOwnProperty('Nombre') ||
-            firstRow.hasOwnProperty('nombre') ||
-            firstRow.hasOwnProperty('NOMBRE')
+          // Map column indices
+          const alumnoIndex = headers.findIndex(h => 
+            /^(alumno|nombre)$/i.test(h)
           );
           
-          const hasCurso = firstRow && (
-            firstRow.hasOwnProperty('Curso') || 
-            firstRow.hasOwnProperty('curso') || 
-            firstRow.hasOwnProperty('CURSO') ||
-            firstRow.hasOwnProperty('Clase') ||
-            firstRow.hasOwnProperty('clase') ||
-            firstRow.hasOwnProperty('CLASE')
+          const cursoIndex = headers.findIndex(h => 
+            /^(curso|clase)$/i.test(h)
           );
           
-          if (!hasAlumno || !hasCurso) {
-            const availableColumns = Object.keys(firstRow || {}).join(', ');
+          if (alumnoIndex === -1 || cursoIndex === -1) {
             throw new Error(
-              `El archivo Excel debe tener columnas "Alumno" y "Curso".\n` +
-              `Columnas encontradas: ${availableColumns || 'ninguna'}\n` +
-              `Asegúrate de que la primera fila contenga los nombres de las columnas.`
+              `El archivo debe tener columnas "Alumno"/"Nombre" y "Curso"/"Clase".\n` +
+              `Columnas encontradas: ${headers.join(', ')}`
             );
           }
           
-          // Normalize column names to expected format
-          const normalizedData = json.map(row => {
-            // Find the actual column names (case-insensitive)
-            let alumnoKey = Object.keys(row).find(k => 
-              /^(alumno|nombre)$/i.test(k.trim())
-            );
-            let cursoKey = Object.keys(row).find(k => 
-              /^(curso|clase)$/i.test(k.trim())
-            );
-            
-            return {
-              Alumno: row[alumnoKey] || row['Alumno'] || row['Nombre'] || '',
-              Curso: row[cursoKey] || row['Curso'] || row['Clase'] || ''
-            };
-          }).filter(row => row.Alumno && row.Curso); // Filter out empty rows
+          // Convert data rows to objects
+          const processedData = json.slice(1).map(row => ({
+            Alumno: String(row[alumnoIndex] || '').trim(),
+            Curso: String(row[cursoIndex] || '').trim()
+          })).filter(row => row.Alumno && row.Curso);
           
-          console.log(`📊 Datos normalizados: ${normalizedData.length} filas válidas`);
+          console.log(`📊 Datos procesados: ${processedData.length} filas válidas`);
           
-          if (normalizedData.length === 0) {
-            throw new Error('No se encontraron datos válidos después de procesar el archivo');
+          if (processedData.length === 0) {
+            throw new Error('No se encontraron datos válidos en el archivo');
           }
           
-          resolve(normalizedData);
+          resolve(processedData);
         } catch (error) {
           console.error('❌ Error procesando Excel:', error);
-          reject(error);
+          reject(new Error(
+            'Error al procesar el archivo Excel. ' +
+            'Asegúrate de que es un archivo válido y contiene las columnas correctas.\n\n' +
+            error.message
+          ));
         }
       };
       
@@ -106,8 +107,14 @@ export const ExcelUtils = {
         reject(new Error('Error al leer el archivo. Asegúrate de que es un archivo Excel válido.'));
       };
       
-      // Read as ArrayBuffer for better compatibility
-      reader.readAsArrayBuffer(file);
+      try {
+        // Try to read as ArrayBuffer first
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        console.warn('⚠️ Error con ArrayBuffer, intentando como texto binario:', error);
+        // Fallback for mobile browsers
+        reader.readAsBinaryString(file);
+      }
     });
   }
 };

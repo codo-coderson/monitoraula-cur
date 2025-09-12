@@ -45,6 +45,8 @@ export class CargaAlumnosView {
               padding: 0.5rem;
               border: 1px solid #ccc;
               border-radius: 4px;
+              width: 100%;
+              box-sizing: border-box;
             "
           />
           
@@ -79,6 +81,7 @@ export class CargaAlumnosView {
                 border-radius: 4px;
                 cursor: pointer;
                 font-weight: 500;
+                flex: 1;
               "
             >
               Cargar Alumnos
@@ -94,6 +97,7 @@ export class CargaAlumnosView {
                 cursor: pointer;
                 display: flex;
                 align-items: center;
+                justify-content: center;
                 gap: 0.5rem;
               "
             >
@@ -184,10 +188,21 @@ export class CargaAlumnosView {
           this.ocultarLoading();
           showSuccess(`Datos cargados correctamente: ${data.length} alumnos en ${clases.length} clases.`);
           
-          // Esperar un momento antes de navegar
+          // Navigate directly to the first class after a short delay
           setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'menu' } }));
-          }, 2000);
+            const firstClass = clases[0];
+            if (firstClass) {
+              window.dispatchEvent(new CustomEvent('navegacion', { 
+                detail: { 
+                  vista: 'clase',
+                  params: { clase: firstClass }
+                }
+              }));
+            } else {
+              window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'clase' } }));
+            }
+          }, 1500);
+
         } catch (dbError) {
           console.error('Error al actualizar base de datos:', dbError);
           throw new Error('Error al actualizar la base de datos. Por favor, intenta de nuevo.');
@@ -205,7 +220,7 @@ export class CargaAlumnosView {
     };
 
     document.getElementById('btnVolver').onclick = () => {
-      window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'menu' } }));
+      window.dispatchEvent(new CustomEvent('navegacion', { detail: { vista: 'clase' } }));
     };
     
     // Clear messages when selecting a new file
@@ -240,6 +255,7 @@ export class CargaAlumnosView {
       border-radius: 8px;
       text-align: center;
       min-width: 250px;
+      margin: 1rem;
     `;
     box.innerHTML = `
       <div style="margin-bottom: 1rem; font-size: 1.1rem;">${mensaje}</div>
