@@ -5,38 +5,69 @@ export const ExcelUtils = {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
-      reader.onload = function(e) {
+      reader.onload = async function(e) {
         try {
-          console.log('📊 Procesando archivo Excel...');
-          const fileData = e.target.result;
-          
-          // Configure XLSX to be more tolerant of different file formats
-          const options = {
-            type: 'array',
-            cellDates: true,
-            cellNF: false,
-            cellText: false
-          };
+          console.log('📊 Procesando archivo Excel...', {
+            fileName: file.name,
+            fileSize: file.size,
+            fileType: file.type,
+            isMobile: /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)
+          });
 
-          // For mobile Safari compatibility
-          if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
-            options.type = 'base64';
-          }
-          
           let workbook;
-          try {
-            workbook = XLSX.read(fileData, options);
-          } catch (readError) {
-            console.error('Error en primera lectura, intentando alternativa:', readError);
-            // Try alternative reading method for mobile
-            workbook = XLSX.read(btoa(fileData), { type: 'base64' });
+          const fileData = e.target.result;
+
+          // Try different reading methods for maximum compatibility
+          const readMethods = [
+            // Method 1: Array Buffer (works best on desktop)
+            async () => {
+              console.log('Intentando método 1: Array Buffer');
+              return XLSX.read(fileData, { type: 'array' });
+            },
+            // Method 2: Binary String (better for some mobile browsers)
+            async () => {
+              console.log('Intentando método 2: Binary String');
+              return XLSX.read(fileData, { type: 'binary' });
+            },
+            // Method 3: Base64 (good for iOS)
+            async () => {
+              console.log('Intentando método 3: Base64');
+              const base64 = btoa(
+                new Uint8Array(fileData).reduce((data, byte) => data + String.fromCharCode(byte), '')
+              );
+              return XLSX.read(base64, { type: 'base64' });
+            },
+            // Method 4: Raw Binary (fallback)
+            async () => {
+              console.log('Intentando método 4: Raw Binary');
+              return XLSX.read(fileData, { type: 'string' });
+            }
+          ];
+
+          // Try each method until one works
+          let lastError;
+          for (const method of readMethods) {
+            try {
+              workbook = await method();
+              if (workbook && workbook.SheetNames) {
+                console.log('✅ Método exitoso');
+                break;
+              }
+            } catch (error) {
+              console.warn('Método falló:', error);
+              lastError = error;
+              continue;
+            }
+          }
+
+          if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+            throw new Error(
+              'No se pudo leer el archivo Excel. ' +
+              'Último error: ' + (lastError?.message || 'Formato no reconocido')
+            );
           }
           
           console.log('📊 Hojas disponibles:', workbook.SheetNames);
-          
-          if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
-            throw new Error('El archivo Excel está vacío o no es válido');
-          }
           
           const sheetName = workbook.SheetNames[0];
           const sheet = workbook.Sheets[sheetName];
@@ -53,23 +84,21 @@ export const ExcelUtils = {
             header: 1 // Generate headers from first row
           });
           
-          console.log(`📊 Filas encontradas: ${json.length}`);
-          
           if (!json.length) {
             throw new Error('El archivo Excel no contiene datos');
           }
           
-          // Get headers from first row
-          const headers = json[0].map(h => String(h).trim());
+          // Get headers from first row and clean them
+          const headers = json[0].map(h => String(h || '').trim());
           console.log('📊 Encabezados encontrados:', headers);
           
-          // Map column indices
+          // Map column indices with flexible matching
           const alumnoIndex = headers.findIndex(h => 
-            /^(alumno|nombre)$/i.test(h)
+            /^(alumno|nombre|student|name)$/i.test(h)
           );
           
           const cursoIndex = headers.findIndex(h => 
-            /^(curso|clase)$/i.test(h)
+            /^(curso|clase|group|class)$/i.test(h)
           );
           
           if (alumnoIndex === -1 || cursoIndex === -1) {
@@ -79,16 +108,26 @@ export const ExcelUtils = {
             );
           }
           
-          // Convert data rows to objects
-          const processedData = json.slice(1).map(row => ({
-            Alumno: String(row[alumnoIndex] || '').trim(),
-            Curso: String(row[cursoIndex] || '').trim()
-          })).filter(row => row.Alumno && row.Curso);
+          // Convert data rows to objects with validation
+          const processedData = json.slice(1)
+            .map(row => {
+              // Ensure row has enough columns
+              if (!row[alumnoIndex] || !row[cursoIndex]) return null;
+              
+              return {
+                Alumno: String(row[alumnoIndex] || '').trim(),
+                Curso: String(row[cursoIndex] || '').trim()
+              };
+            })
+            .filter(row => row && row.Alumno && row.Curso); // Remove invalid rows
           
           console.log(`📊 Datos procesados: ${processedData.length} filas válidas`);
           
           if (processedData.length === 0) {
-            throw new Error('No se encontraron datos válidos en el archivo');
+            throw new Error(
+              'No se encontraron datos válidos en el archivo.\n' +
+              'Asegúrate de que el archivo tiene el formato correcto y contiene datos.'
+            );
           }
           
           resolve(processedData);
@@ -104,17 +143,14 @@ export const ExcelUtils = {
       
       reader.onerror = function(error) {
         console.error('❌ Error leyendo archivo:', error);
-        reject(new Error('Error al leer el archivo. Asegúrate de que es un archivo Excel válido.'));
+        reject(new Error(
+          'Error al leer el archivo. ' +
+          'Asegúrate de que es un archivo Excel válido y no está dañado.'
+        ));
       };
       
-      try {
-        // Try to read as ArrayBuffer first
-        reader.readAsArrayBuffer(file);
-      } catch (error) {
-        console.warn('⚠️ Error con ArrayBuffer, intentando como texto binario:', error);
-        // Fallback for mobile browsers
-        reader.readAsBinaryString(file);
-      }
+      // Start with readAsArrayBuffer for better compatibility
+      reader.readAsArrayBuffer(file);
     });
   }
 };
