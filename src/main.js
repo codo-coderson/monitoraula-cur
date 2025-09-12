@@ -90,9 +90,31 @@ class App {
     // Show loading while checking authentication
     this.loadingComponent.render('Verificando sesión...');
 
+    // Set a timeout to prevent infinite loading (3 seconds max)
+    const timeoutId = setTimeout(() => {
+      console.warn('⏱️ Timeout alcanzado, redirigiendo a login...');
+      this.initialNavigationDone = true;
+      this.navegarA('login');
+    }, 3000);
+
     try {
-      // Initialize auth service (this will try auto-login with saved credentials)
-      await AuthService.init();
+      // Initialize auth service with a Promise.race to enforce timeout
+      const authInitPromise = AuthService.init();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Auth timeout')), 2800)
+      );
+
+      try {
+        await Promise.race([authInitPromise, timeoutPromise]);
+      } catch (timeoutError) {
+        console.warn('⏱️ Auth initialization timeout:', timeoutError);
+        clearTimeout(timeoutId);
+        this.initialNavigationDone = true;
+        this.navegarA('login');
+        return;
+      }
+
+      clearTimeout(timeoutId); // Clear the timeout if auth succeeds
 
       if (AuthService.isAuthenticated()) {
         console.log('✅ Usuario autenticado:', AuthService.getCurrentUser()?.email);
@@ -100,8 +122,19 @@ class App {
         // Update loading message
         this.loadingComponent.render('Cargando datos...');
         
-        // Load database data
-        await DatabaseService.loadInitialData();
+        // Load database data with timeout
+        const dataLoadPromise = DatabaseService.loadInitialData();
+        const dataTimeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Data load timeout')), 5000)
+        );
+
+        try {
+          await Promise.race([dataLoadPromise, dataTimeoutPromise]);
+        } catch (dataError) {
+          console.error('❌ Error cargando datos:', dataError);
+          // If data load fails, still try to navigate but show a warning
+          alert('Hubo un problema cargando los datos. Algunos elementos podrían no estar disponibles.');
+        }
         
         // Ensure we have valid data before proceeding
         const clases = DatabaseService.getClases();
@@ -119,7 +152,8 @@ class App {
       }
     } catch (error) {
       console.error('❌ Error durante inicialización:', error);
-      // On error, show login screen
+      clearTimeout(timeoutId);
+      // On any error, show login screen
       this.initialNavigationDone = true;
       this.navegarA('login');
     }
@@ -147,7 +181,11 @@ class App {
     this.header.refresh();
     
     // Clean up old records
-    CleanupService.limpiarRegistrosAntiguos();
+    try {
+      CleanupService.limpiarRegistrosAntiguos();
+    } catch (cleanupError) {
+      console.warn('⚠️ Error en limpieza de registros:', cleanupError);
+    }
 
     const clases = DatabaseService.getClases();
     console.log('🎯 Navegando directo, clases disponibles:', clases);
@@ -287,6 +325,15 @@ class App {
       ">
         <h2 style="margin: 0 0 1rem 0;">⚠️ Error</h2>
         <p style="margin: 0;">${mensaje}</p>
+        <button onclick="window.location.reload()" style="
+          margin-top: 1rem;
+          padding: 0.5rem 1rem;
+          background: #dc3545;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+        ">Recargar página</button>
       </div>
     `;
   }

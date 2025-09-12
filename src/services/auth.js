@@ -75,70 +75,138 @@ export const AuthService = {
     }
   },
 
-  // Inicializar el servicio de autenticación
+  // Inicializar el servicio de autenticación con timeout
   async init() {
-    return new Promise(async (resolve) => {
-      // First, try to login with saved credentials if available
-      const savedCreds = this.getSavedCredentials();
-      let autoLoginSuccessful = false;
-      
-      if (savedCreds && !auth.currentUser) {
-        console.log('🔄 Intentando auto-login con credenciales guardadas...');
-        try {
-          await this.login(savedCreds.email, savedCreds.password, false);
-          autoLoginSuccessful = true;
-          console.log('✅ Auto-login exitoso');
-        } catch (error) {
-          console.error('❌ Auto-login falló:', error);
-          this.clearSavedCredentials();
-        }
-      }
+    return new Promise(async (resolve, reject) => {
+      // Set a hard timeout for the entire init process
+      const initTimeout = setTimeout(() => {
+        console.warn('⏱️ Auth init timeout - resolving with no user');
+        resolve(null);
+      }, 2500);
 
-      // Listen for auth state changes to handle persistent login
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
-        const wasInitialized = this.currentUser !== null || !user;
-        this.currentUser = user;
+      try {
+        // First, check if there's already a Firebase session
+        if (auth.currentUser) {
+          console.log('✅ Usuario ya autenticado en Firebase:', auth.currentUser.email);
+          this.currentUser = auth.currentUser;
+          clearTimeout(initTimeout);
+          
+          // Load admin status and last visited class
+          try {
+            await Promise.all([
+              this.updateAdminStatus(),
+              RolesService.getLastVisitedClass(auth.currentUser.email).then(lastClass => {
+                this.lastVisitedClass = lastClass;
+              })
+            ]);
+            this.listenForAdminChanges();
+          } catch (statusError) {
+            console.warn('⚠️ Error cargando estado del usuario:', statusError);
+          }
+          
+          resolve(auth.currentUser);
+          return;
+        }
+
+        // Try to login with saved credentials if available
+        const savedCreds = this.getSavedCredentials();
         
-        if (user) {
-          await this.updateAdminStatus();
-          this.listenForAdminChanges();
-          this.lastVisitedClass = await RolesService.getLastVisitedClass(user.email);
-        } else {
-          this.isAdmin = false;
-          this.lastVisitedClass = null;
-          if (this.adminListenerUnsubscribe) {
-            this.adminListenerUnsubscribe();
+        if (savedCreds) {
+          console.log('🔄 Intentando auto-login con credenciales guardadas...');
+          try {
+            // Set a timeout for auto-login attempt
+            const loginTimeout = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Login timeout')), 2000)
+            );
+            
+            const loginPromise = this.login(savedCreds.email, savedCreds.password, false);
+            
+            await Promise.race([loginPromise, loginTimeout]);
+            
+            console.log('✅ Auto-login exitoso');
+            clearTimeout(initTimeout);
+            resolve(this.currentUser);
+            return;
+          } catch (error) {
+            console.error('❌ Auto-login falló:', error);
+            this.clearSavedCredentials();
+            // Continue to auth state listener
           }
         }
+
+        // Set up auth state listener with timeout
+        let authStateResolved = false;
         
-        // Only resolve on the first call to prevent multiple initializations
-        if (!wasInitialized || autoLoginSuccessful) {
+        const authStateTimeout = setTimeout(() => {
+          if (!authStateResolved) {
+            console.warn('⏱️ Auth state timeout - no user detected');
+            clearTimeout(initTimeout);
+            resolve(null);
+          }
+        }, 1500);
+
+        // Listen for auth state changes
+        this.authStateUnsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (authStateResolved) return; // Prevent multiple resolutions
+          
+          authStateResolved = true;
+          clearTimeout(authStateTimeout);
+          clearTimeout(initTimeout);
+          
+          this.currentUser = user;
+          
+          if (user) {
+            console.log('✅ Usuario detectado por Firebase:', user.email);
+            try {
+              await this.updateAdminStatus();
+              this.listenForAdminChanges();
+              this.lastVisitedClass = await RolesService.getLastVisitedClass(user.email);
+            } catch (error) {
+              console.warn('⚠️ Error cargando datos del usuario:', error);
+            }
+          } else {
+            console.log('ℹ️ No hay usuario autenticado');
+            this.isAdmin = false;
+            this.lastVisitedClass = null;
+          }
+          
           resolve(user);
-        }
-      });
-      
-      // Store the unsubscribe function to clean up later if needed
-      this.authStateUnsubscribe = unsubscribe;
+        });
+
+      } catch (error) {
+        console.error('❌ Error en init:', error);
+        clearTimeout(initTimeout);
+        resolve(null);
+      }
     });
   },
 
   async updateAdminStatus() {
-    const wasAdmin = this.isAdmin;
-    this.isAdmin = await RolesService.isAdmin(this.currentUser);
-    if (wasAdmin !== this.isAdmin) {
-      window.dispatchEvent(new CustomEvent('admin-status-changed'));
+    try {
+      const wasAdmin = this.isAdmin;
+      this.isAdmin = await RolesService.isAdmin(this.currentUser);
+      if (wasAdmin !== this.isAdmin) {
+        window.dispatchEvent(new CustomEvent('admin-status-changed'));
+      }
+    } catch (error) {
+      console.error('Error actualizando estado de admin:', error);
+      this.isAdmin = false;
     }
   },
 
   listenForAdminChanges() {
-    if (this.adminListenerUnsubscribe) {
-      this.adminListenerUnsubscribe();
+    try {
+      if (this.adminListenerUnsubscribe) {
+        this.adminListenerUnsubscribe();
+      }
+      const designatedAdminsRef = ref(db, 'designated_admins');
+      this.adminListenerUnsubscribe = onValue(designatedAdminsRef, () => {
+        RolesService.invalidateAdminCache();
+        this.updateAdminStatus();
+      });
+    } catch (error) {
+      console.error('Error configurando listener de admin:', error);
     }
-    const designatedAdminsRef = ref(db, 'designated_admins');
-    this.adminListenerUnsubscribe = onValue(designatedAdminsRef, () => {
-      RolesService.invalidateAdminCache();
-      this.updateAdminStatus();
-    });
   },
 
   // Iniciar sesión
@@ -146,8 +214,15 @@ export const AuthService = {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
-      this.isAdmin = await RolesService.isAdmin(userCredential.user.uid);
-      this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
+      
+      // Try to get admin status but don't fail if it errors
+      try {
+        this.isAdmin = await RolesService.isAdmin(userCredential.user.uid);
+        this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
+      } catch (roleError) {
+        console.warn('⚠️ Error obteniendo roles:', roleError);
+        this.isAdmin = false;
+      }
       
       // Save credentials for future auto-login (unless it's an auto-login attempt)
       if (saveCredentials) {
@@ -207,8 +282,12 @@ export const AuthService = {
   // Actualizar última clase visitada
   async updateLastVisitedClass(className) {
     if (this.currentUser?.email) {
-      await RolesService.setLastVisitedClass(this.currentUser.email, className);
-      this.lastVisitedClass = className;
+      try {
+        await RolesService.setLastVisitedClass(this.currentUser.email, className);
+        this.lastVisitedClass = className;
+      } catch (error) {
+        console.error('Error actualizando última clase visitada:', error);
+      }
     }
   },
 
