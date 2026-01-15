@@ -83,11 +83,8 @@ export const AuthService = {
   // Inicializar el servicio de autenticación con timeout
   async init() {
     return new Promise(async (resolve, reject) => {
-      // Set a hard timeout for the entire init process
-      const initTimeout = setTimeout(() => {
-        console.warn('⏱️ Auth init timeout - resolving with no user');
-        resolve(null);
-      }, 2500);
+      // Remove hard timeout to allow unlimited wait time for persistence
+      // const initTimeout = setTimeout(...)
 
       try {
         // First, check if there's already a Firebase session
@@ -138,20 +135,11 @@ export const AuthService = {
         // Set up auth state listener with timeout
         let authStateResolved = false;
 
-        const authStateTimeout = setTimeout(() => {
-          if (!authStateResolved) {
-            console.warn('⏱️ Auth state timeout - no user detected');
-            clearTimeout(initTimeout);
-            resolve(null);
-          }
-        }, 1500);
-
         // Listen for auth state changes
         this.authStateUnsubscribe = onAuthStateChanged(auth, async (user) => {
           if (authStateResolved) return; // Prevent multiple resolutions
 
           authStateResolved = true;
-          clearTimeout(authStateTimeout);
           clearTimeout(initTimeout);
 
           this.currentUser = user;
