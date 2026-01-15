@@ -91,7 +91,7 @@ export const AuthService = {
         if (auth.currentUser) {
           console.log('✅ Usuario ya autenticado en Firebase:', auth.currentUser.email);
           this.currentUser = auth.currentUser;
-          clearTimeout(initTimeout);
+
 
           // Load admin status and last visited class
           try {
@@ -122,8 +122,8 @@ export const AuthService = {
             await Promise.race([loginPromise, loginTimeout]);
 
             console.log('✅ Auto-login exitoso');
-            clearTimeout(initTimeout);
             resolve(this.currentUser);
+
             return;
           } catch (error) {
             console.error('❌ Auto-login falló:', error);
@@ -140,7 +140,8 @@ export const AuthService = {
           if (authStateResolved) return; // Prevent multiple resolutions
 
           authStateResolved = true;
-          clearTimeout(initTimeout);
+          authStateResolved = true;
+
 
           this.currentUser = user;
 
@@ -164,7 +165,7 @@ export const AuthService = {
 
       } catch (error) {
         console.error('❌ Error en init:', error);
-        clearTimeout(initTimeout);
+        console.error('❌ Error en init:', error);
         resolve(null);
       }
     });

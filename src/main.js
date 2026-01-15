@@ -35,13 +35,22 @@ class App {
     this.isOffline = false;
 
     // Monitorizar Conexión
+    let offlineTimeout;
     DatabaseService.monitorConnection((isConnected) => {
-      this.isOffline = !isConnected;
+      // Limpiar timeout pendiente
+      if (offlineTimeout) clearTimeout(offlineTimeout);
+
       if (!isConnected) {
-        console.warn('❌ SIN CONEXIÓN: Bloqueando interfaz');
-        this.statusOverlay.show('offline');
+        // Esperar 3 segundos antes de mostrar el error de conexión
+        // para evitar parpadeos en redes inestables o durante la carga
+        offlineTimeout = setTimeout(() => {
+          console.warn('❌ SIN CONEXIÓN: Bloqueando interfaz');
+          this.isOffline = true;
+          this.statusOverlay.show('offline');
+        }, 3000);
       } else {
         console.log('✅ RECONECTADO: Restaurando interfaz');
+        this.isOffline = false;
         // Solo ocultar si no hay problemas de autenticación O si estamos en login
         if (AuthService.isAuthenticated() || (this.currentView === this.views.login)) {
           this.statusOverlay.hide();
