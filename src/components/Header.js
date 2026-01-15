@@ -59,10 +59,10 @@ export class Header {
             color: var(--gray-800);
             font-weight: 600;
           ">Visitas al WC</h1>
-          <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--gray-600); font-size: var(--font-size-base);">
-            <button id="btnPrevDay" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0 0.5rem;">◀</button>
-            <span id="fechaHeader">${DateUtils.formatDateHeader(ViewDateService.getDate())}</span>
-            <button id="btnNextDay" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0 0.5rem;">▶</button>
+          <div style="display: flex; align-items: center; gap: 2px; color: var(--gray-600); font-size: var(--font-size-base);">
+            <button id="btnPrevDay" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0 2px; display: flex; align-items: center;">◀</button>
+            <span id="fechaHeader" style="white-space: nowrap; font-weight: 500;">${DateUtils.formatDateHeader(ViewDateService.getDate())}</span>
+            <button id="btnNextDay" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0 2px; display: flex; align-items: center;">▶</button>
           </div>
         </div>
         <div style="position: relative;">
