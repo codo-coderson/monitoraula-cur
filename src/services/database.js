@@ -175,5 +175,49 @@ export const DatabaseService = {
     }, 0);
 
     return totalSalidas / diasLectivos.length;
+  },
+
+  // Obtener estadísticas de actividad por usuario
+  getUserActivityStats(startDate, endDate) {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    const stats = {};
+
+    // Recorrer toda la estructura de registros
+    const registrosGlobales = cache.registros || {};
+
+    Object.values(registrosGlobales).forEach(claseData => {
+      Object.values(claseData || {}).forEach(alumnoData => {
+        Object.entries(alumnoData || {}).forEach(([fechaStr, registro]) => {
+          // Verificar si la fecha está en rango
+          const fecha = new Date(fechaStr);
+          if (fecha >= start && fecha <= end) {
+            (registro.salidas || []).forEach(salida => {
+              const userEmail = salida.usuario;
+              if (!userEmail) return;
+
+              if (!stats[userEmail]) {
+                stats[userEmail] = {
+                  email: userEmail,
+                  total: 0,
+                  byDate: {}
+                };
+              }
+
+              // Incrementar total
+              stats[userEmail].total++;
+
+              // Incrementar por día
+              if (!stats[userEmail].byDate[fechaStr]) {
+                stats[userEmail].byDate[fechaStr] = 0;
+              }
+              stats[userEmail].byDate[fechaStr]++;
+            });
+          }
+        });
+      });
+    });
+
+    return Object.values(stats).sort((a, b) => b.total - a.total);
   }
 }; 

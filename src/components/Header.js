@@ -102,6 +102,12 @@ export class Header {
                 border-bottom: 1px solid #eee;
                 transition: background 0.2s;
               ">📊 Visitas al WC</div>
+              <div class="menu-item" data-action="stats" style="
+                padding: 0.7rem 1rem;
+                cursor: pointer;
+                border-bottom: 1px solid #eee;
+                transition: background 0.2s;
+              ">📈 Estadísticas</div>
               <div class="menu-item" data-action="cargaAlumnos" style="
                 padding: 0.7rem 1rem;
                 cursor: pointer;
@@ -235,6 +241,12 @@ export class Header {
           case 'cargaAlumnos':
             window.dispatchEvent(new CustomEvent('navegacion', {
               detail: { vista: 'carga' }
+            }));
+            break;
+
+          case 'stats':
+            window.dispatchEvent(new CustomEvent('navegacion', {
+              detail: { vista: 'stats' }
             }));
             break;
 

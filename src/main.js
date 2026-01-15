@@ -7,6 +7,7 @@ import { CargaAlumnosView } from './views/CargaAlumnosView.js';
 import { LoginView } from './views/LoginView.js';
 import { InformeView } from './views/InformeView.js';
 import { AdminBDView } from './views/AdminBDView.js';
+import { StatsView } from './views/StatsView.js';
 import { LoadingComponent } from './components/Loading.js';
 import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
@@ -110,7 +111,8 @@ class App {
         clase: new ClaseView(this.mainContainer),
         carga: new CargaAlumnosView(this.mainContainer),
         informe: new InformeView(this.mainContainer),
-        adminbd: new AdminBDView(this.mainContainer)
+        adminbd: new AdminBDView(this.mainContainer),
+        stats: new StatsView(this.mainContainer)
       };
       console.log('✅ Vistas inicializadas');
 
