@@ -44,5 +44,25 @@ export const DateUtils = {
     }, 0);
 
     return totalSalidas / ultimasFechas.length;
+  },
+
+  addDays(dateString, days) {
+    const date = new Date(dateString);
+    date.setDate(date.getDate() + days);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  },
+
+  formatDateHeader(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    const diaSemana = dias[date.getDay()];
+    const diaMes = date.getDate();
+    const mes = meses[date.getMonth()];
+    const anio = date.getFullYear();
+
+    return `${diaSemana}, ${diaMes} de ${mes} de ${anio}`;
   }
 }; 

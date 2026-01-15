@@ -1,6 +1,7 @@
 import { DateUtils } from '../utils/date.js';
 import { DatabaseService } from '../services/database.js';
 import { AuthService } from '../services/auth.js';
+import { ViewDateService } from '../services/viewDate.js';
 
 export class AlumnoCard {
   constructor(container, clase, alumnoId, nombre) {
@@ -12,6 +13,9 @@ export class AlumnoCard {
   }
 
   async render() {
+    const isToday = ViewDateService.isToday();
+    const btnInformeStyle = isToday ? 'display: flex;' : 'display: none;';
+
     this.container.innerHTML = `
       <div class="alumno-card" style="
         border: 1px solid #e0e0e0;
@@ -38,7 +42,7 @@ export class AlumnoCard {
               border-radius: 4px;
               cursor: pointer;
               font-size: var(--font-size-sm);
-              display: flex;
+              ${btnInformeStyle}
               align-items: center;
               gap: 0.25rem;
             "
@@ -53,30 +57,34 @@ export class AlumnoCard {
     `;
 
     // Usar la caché global para los registros
-    this.actualizarTarjeta(DatabaseService.getRegistrosWC(this.clase, this.alumnoId));
+    this.actualizarTarjeta();
   }
 
-  actualizarTarjeta(registros) {
-    const fechaHoy = DateUtils.getFechaHoy();
-    const registroHoy = registros[fechaHoy] || { salidas: [] };
-    
+  actualizarTarjeta() {
+    const viewDate = ViewDateService.getDate();
+    const isToday = ViewDateService.isToday();
+    const registros = DatabaseService.getRegistrosWC(this.clase, this.alumnoId);
+    const registroHoy = registros[viewDate] || { salidas: [] };
+
     // Actualizar botones de horas
     const botonesContainer = document.getElementById(`botones-${this.alumnoId}`);
     if (botonesContainer) {
-      botonesContainer.innerHTML = this.generarBotonesHoras(registroHoy.salidas);
-      this.asignarEventosBotones(registroHoy.salidas);
+      botonesContainer.innerHTML = this.generarBotonesHoras(registroHoy.salidas, isToday);
+      if (isToday) {
+        this.asignarEventosBotones(registroHoy.salidas);
+      }
     }
 
     // Actualizar media de salidas
     const mediaElement = document.getElementById(`media-${this.alumnoId}`);
     if (mediaElement) {
       const media = DatabaseService.calcularMediaSalidasAlumno(this.clase, this.alumnoId);
-      const mediaColor = media >= 5 ? '#ff0000' : 
-                        media >= 4 ? '#cc0000' :
-                        media >= 3 ? '#cc6600' :
-                        media >= 2 ? '#000000' : '#666666';
+      const mediaColor = media >= 5 ? '#ff0000' :
+        media >= 4 ? '#cc0000' :
+          media >= 3 ? '#cc6600' :
+            media >= 2 ? '#000000' : '#666666';
       const mediaStyle = media >= 2 ? 'font-weight: bold;' : '';
-      
+
       mediaElement.innerHTML = `
         <div style="
           font-size: var(--font-size-sm);
@@ -89,7 +97,7 @@ export class AlumnoCard {
     }
   }
 
-  generarBotonesHoras(salidas = []) {
+  generarBotonesHoras(salidas = [], isToday = true) {
     const usuarioActual = AuthService.getCurrentUser()?.email || '';
     return Array.from({ length: 6 }, (_, i) => {
       const hora = i + 1;
@@ -97,11 +105,11 @@ export class AlumnoCard {
       const activa = Boolean(registro);
       const esPropio = activa && registro?.usuario === usuarioActual;
       const usuarioMarca = activa ? registro.usuario.split('@')[0] : '';
-      
+
       const estilo = activa
         ? (esPropio
-            ? 'background-color: var(--primary-color); color: white;'
-            : 'background-color: #aaa; color: white; opacity: 0.7; cursor: help;')
+          ? 'background-color: var(--primary-color); color: white;'
+          : 'background-color: #aaa; color: white; opacity: 0.7; cursor: help;')
         : 'background-color: #f5f5f5; color: #333;';
 
       return `
@@ -120,7 +128,7 @@ export class AlumnoCard {
               cursor: ${activa && !esPropio ? 'help' : 'pointer'};
               transition: all 0.2s ease;
             "
-            ${activa && !esPropio ? 'disabled' : ''}
+            ${(activa && !esPropio) || !isToday ? 'disabled' : ''}
           >
             ${hora}
           </button>

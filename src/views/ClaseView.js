@@ -8,6 +8,18 @@ export class ClaseView {
   constructor(container) {
     this.container = container;
     this.alumnoCards = new Map();
+
+    // Escuchar cambios de fecha global
+    window.addEventListener('view-date-changed', (event) => {
+      console.log('📅 ClaseView: Fecha cambiada a', event.detail);
+      this.actualizarVistaFecha();
+    });
+  }
+
+  actualizarVistaFecha() {
+    this.alumnoCards.forEach(card => {
+      card.render(); // Re-render completo para actualizar estado de botones y datos
+    });
   }
 
   async render(clase) {
@@ -36,21 +48,21 @@ export class ClaseView {
       // Usar la caché global
       const alumnos = DatabaseService.getAlumnosPorClase(clase);
       const alumnosContainer = document.getElementById('alumnos-container');
-      
+
       console.log('🔍 ClaseView: Alumnos encontrados:', {
         clase: clase,
         alumnos: alumnos,
         numAlumnos: Object.keys(alumnos).length,
         isLoaded: DatabaseService.isLoaded()
       });
-      
+
       if (!Object.keys(alumnos).length) {
         // Verificar si el usuario es admin para mostrar el botón
         const user = AuthService.getCurrentUser();
         const isAdmin = user ? await RolesService.isAdmin(user.uid) : false;
-        
+
         console.log('⚠️ No hay alumnos en la clase', clase, '- usuario admin:', isAdmin);
-        
+
         alumnosContainer.innerHTML = `
           <div style="
             text-align: center;
@@ -87,17 +99,17 @@ export class ClaseView {
           const btnCarga = document.getElementById('btnCarga');
           if (btnCarga) {
             btnCarga.onclick = () => {
-              window.dispatchEvent(new CustomEvent('navegacion', { 
-                detail: { vista: 'carga' } 
+              window.dispatchEvent(new CustomEvent('navegacion', {
+                detail: { vista: 'carga' }
               }));
             };
           }
         }
         return;
       }
-      
+
       console.log('✅ ClaseView: Renderizando', Object.keys(alumnos).length, 'alumnos');
-      
+
       // Ordenar los alumnos alfabéticamente por nombre antes de renderizar
       const alumnosOrdenados = Object.entries(alumnos)
         .sort(([, a], [, b]) => a.nombre.localeCompare(b.nombre));
@@ -105,7 +117,7 @@ export class ClaseView {
       for (const [alumnoId, data] of alumnosOrdenados) {
         const cardContainer = document.createElement('div');
         alumnosContainer.appendChild(cardContainer);
-        
+
         const card = new AlumnoCard(cardContainer, clase, alumnoId, data.nombre);
         await card.render();
         this.alumnoCards.set(alumnoId, card);

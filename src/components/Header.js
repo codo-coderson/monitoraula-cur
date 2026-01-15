@@ -1,12 +1,13 @@
 import { DateUtils } from '../utils/date.js';
 import { AuthService } from '../services/auth.js';
 import { RolesService } from '../services/roles.js';
+import { ViewDateService } from '../services/viewDate.js';
 
 export class Header {
   constructor(container) {
     this.container = container;
     this.updateInterval = null;
-    
+
     // Escuchar evento de login exitoso para refrescar el header
     window.addEventListener('user-logged-in', () => {
       console.log('🔄 Usuario logueado - refrescando header...');
@@ -27,12 +28,12 @@ export class Header {
   renderHeader() {
     const user = AuthService.getCurrentUser();
     const userIdentifier = user ? user.email.split('@')[0] : 'Usuario';
-  const isAdmin = AuthService.isAdmin;
-  const isSuperAdminEmail = user?.email === 'salvador.fernandez@salesianas.org';
-    
-    console.log('🔍 Header Debug:', { 
-      user: user?.email, 
-      userIdentifier, 
+    const isAdmin = AuthService.isAdmin;
+    const isSuperAdminEmail = user?.email === 'salvador.fernandez@salesianas.org';
+
+    console.log('🔍 Header Debug:', {
+      user: user?.email,
+      userIdentifier,
       isAdmin,
       authServiceCurrentUser: AuthService.currentUser?.email
     });
@@ -58,8 +59,10 @@ export class Header {
             color: var(--gray-800);
             font-weight: 600;
           ">Visitas al WC</h1>
-          <div style="color: var(--gray-600); font-size: var(--font-size-base);">
-            ${DateUtils.formatearFecha(new Date())}
+          <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--gray-600); font-size: var(--font-size-base);">
+            <button id="btnPrevDay" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0 0.5rem;">◀</button>
+            <span id="fechaHeader">${DateUtils.formatDateHeader(ViewDateService.getDate())}</span>
+            <button id="btnNextDay" style="background:none;border:none;cursor:pointer;font-size:1.2rem;padding:0 0.5rem;">▶</button>
           </div>
         </div>
         <div style="position: relative;">
@@ -132,6 +135,42 @@ export class Header {
     `;
 
     this.setupMenuEvents();
+    this.setupDateNavigation();
+  }
+
+  async setupDateNavigation() {
+    const btnPrev = this.container.querySelector('#btnPrevDay');
+    const btnNext = this.container.querySelector('#btnNextDay');
+    const fechaDisplay = this.container.querySelector('#fechaHeader');
+
+    const updateVisibility = async () => {
+      if (btnPrev) {
+        const isOldest = await ViewDateService.isOldestDate();
+        btnPrev.style.visibility = isOldest ? 'hidden' : 'visible';
+      }
+      if (btnNext) btnNext.style.visibility = ViewDateService.isToday() ? 'hidden' : 'visible';
+      if (fechaDisplay) fechaDisplay.textContent = DateUtils.formatDateHeader(ViewDateService.getDate());
+    };
+
+    if (btnPrev) {
+      btnPrev.onclick = () => {
+        ViewDateService.previousDay();
+        updateVisibility();
+      };
+    }
+
+    if (btnNext) {
+      btnNext.onclick = () => {
+        ViewDateService.nextDay();
+        updateVisibility();
+      };
+    }
+
+    // Initial check
+    updateVisibility();
+
+    // Listen to external changes (e.g. reset to today logic elsewhere)
+    window.addEventListener('view-date-changed', () => updateVisibility());
   }
 
   // Método para refrescar el header después del login
@@ -181,24 +220,24 @@ export class Header {
             // Ir a la primera clase disponible o la última visitada
             const clases = await import('../services/database.js').then(m => m.DatabaseService.getClases());
             const clase = AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass)
-              ? AuthService.lastVisitedClass 
+              ? AuthService.lastVisitedClass
               : (clases.length > 0 ? clases[0] : null);
-            
+
             if (clase) {
-              window.dispatchEvent(new CustomEvent('navegacion', { 
+              window.dispatchEvent(new CustomEvent('navegacion', {
                 detail: { vista: 'clase', params: { clase } }
               }));
             } else {
               alert('No hay clases disponibles');
             }
             break;
-          
+
           case 'cargaAlumnos':
-            window.dispatchEvent(new CustomEvent('navegacion', { 
+            window.dispatchEvent(new CustomEvent('navegacion', {
               detail: { vista: 'carga' }
             }));
             break;
-          
+
           case 'borrarBD':
             if (confirm('⚠️ ATENCIÓN: Esto BORRARÁ TODA la base de datos. ¿Está seguro?')) {
               if (confirm('Esta acción NO se puede deshacer. ¿Confirma que desea borrar TODOS los datos?')) {
@@ -218,11 +257,11 @@ export class Header {
               detail: { vista: 'adminbd' }
             }));
             break;
-          
+
           case 'logout':
             try {
               await AuthService.logout();
-              window.dispatchEvent(new CustomEvent('navegacion', { 
+              window.dispatchEvent(new CustomEvent('navegacion', {
                 detail: { vista: 'login' }
               }));
             } catch (error) {
@@ -237,7 +276,7 @@ export class Header {
   updateDateTime() {
     const fechaElement = this.container.querySelector('#fecha');
     const horaElement = this.container.querySelector('#hora');
-    
+
     if (fechaElement && horaElement) {
       const now = new Date();
       fechaElement.textContent = DateUtils.formatearFecha(now);
@@ -246,8 +285,9 @@ export class Header {
   }
 
   startUpdating() {
-    this.updateDateTime();
-    this.updateInterval = setInterval(() => this.updateDateTime(), 1000);
+    // Clock functionality removed/paused in favor of date navigation
+    // this.updateDateTime();
+    // this.updateInterval = setInterval(() => this.updateDateTime(), 1000);
   }
 
   stopUpdating() {
