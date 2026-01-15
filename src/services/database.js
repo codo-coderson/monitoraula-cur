@@ -13,6 +13,15 @@ let unsubscribers = [];
 let initialLoadPromise = null;
 
 export const DatabaseService = {
+  monitorConnection(onStatusChange) {
+    const connectedRef = ref(db, ".info/connected");
+    onValue(connectedRef, (snap) => {
+      const isConnected = snap.val() === true;
+      console.log(`📡 Estado de conexión: ${isConnected ? 'CONECTADO' : 'DESCONECTADO'}`);
+      if (onStatusChange) onStatusChange(isConnected);
+    });
+  },
+
   loadInitialData() {
     if (initialLoadPromise) return initialLoadPromise;
 
@@ -51,13 +60,13 @@ export const DatabaseService = {
     // This assumes loadInitialData has already been called and populated the unsubscribers array
     const nodes = ['clases', 'alumnos', 'registros'];
     nodes.forEach(node => {
-        const nodeRef = ref(db, `/${node}`);
-        const unsubscribe = onValue(nodeRef, (snapshot) => {
-            console.log(`🔄 DatabaseService: Actualización recibida para /${node}`);
-            cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
-            if (onUpdate) onUpdate();
-        });
-        unsubscribers.push(unsubscribe);
+      const nodeRef = ref(db, `/${node}`);
+      const unsubscribe = onValue(nodeRef, (snapshot) => {
+        console.log(`🔄 DatabaseService: Actualización recibida para /${node}`);
+        cache[node] = snapshot.val() || (node === 'clases' ? [] : {});
+        if (onUpdate) onUpdate();
+      });
+      unsubscribers.push(unsubscribe);
     });
   },
 
@@ -124,7 +133,7 @@ export const DatabaseService = {
   // Obtener todos los días lectivos (días con al menos una salida en cualquier clase)
   getDiasLectivos() {
     const diasLectivos = new Set();
-    
+
     // Recorrer todas las clases y alumnos
     Object.values(cache.registros || {}).forEach(clase => {
       Object.values(clase || {}).forEach(alumno => {

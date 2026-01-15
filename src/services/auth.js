@@ -1,5 +1,5 @@
-import { 
-  getAuth, 
+import {
+  getAuth,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
@@ -50,11 +50,11 @@ export const AuthService = {
     try {
       const stored = localStorage.getItem('monitoraula_creds');
       if (!stored) return null;
-      
+
       const credentials = JSON.parse(stored);
       const email = decryptData(credentials.email);
       const password = decryptData(credentials.password);
-      
+
       if (email && password) {
         console.log('✅ Credenciales recuperadas de localStorage');
         return { email, password };
@@ -75,6 +75,11 @@ export const AuthService = {
     }
   },
 
+  // Subscribe to auth state changes
+  subscribeToAuthChanges(callback) {
+    return onAuthStateChanged(auth, callback);
+  },
+
   // Inicializar el servicio de autenticación con timeout
   async init() {
     return new Promise(async (resolve, reject) => {
@@ -90,7 +95,7 @@ export const AuthService = {
           console.log('✅ Usuario ya autenticado en Firebase:', auth.currentUser.email);
           this.currentUser = auth.currentUser;
           clearTimeout(initTimeout);
-          
+
           // Load admin status and last visited class
           try {
             await this.updateAdminStatus();
@@ -99,26 +104,26 @@ export const AuthService = {
           } catch (statusError) {
             console.warn('⚠️ Error cargando estado del usuario:', statusError);
           }
-          
+
           resolve(auth.currentUser);
           return;
         }
 
         // Try to login with saved credentials if available
         const savedCreds = this.getSavedCredentials();
-        
+
         if (savedCreds) {
           console.log('🔄 Intentando auto-login con credenciales guardadas...');
           try {
             // Set a timeout for auto-login attempt
-            const loginTimeout = new Promise((_, reject) => 
+            const loginTimeout = new Promise((_, reject) =>
               setTimeout(() => reject(new Error('Login timeout')), 2000)
             );
-            
+
             const loginPromise = this.login(savedCreds.email, savedCreds.password, false);
-            
+
             await Promise.race([loginPromise, loginTimeout]);
-            
+
             console.log('✅ Auto-login exitoso');
             clearTimeout(initTimeout);
             resolve(this.currentUser);
@@ -132,7 +137,7 @@ export const AuthService = {
 
         // Set up auth state listener with timeout
         let authStateResolved = false;
-        
+
         const authStateTimeout = setTimeout(() => {
           if (!authStateResolved) {
             console.warn('⏱️ Auth state timeout - no user detected');
@@ -144,13 +149,13 @@ export const AuthService = {
         // Listen for auth state changes
         this.authStateUnsubscribe = onAuthStateChanged(auth, async (user) => {
           if (authStateResolved) return; // Prevent multiple resolutions
-          
+
           authStateResolved = true;
           clearTimeout(authStateTimeout);
           clearTimeout(initTimeout);
-          
+
           this.currentUser = user;
-          
+
           if (user) {
             console.log('✅ Usuario detectado por Firebase:', user.email);
             try {
@@ -165,7 +170,7 @@ export const AuthService = {
             this.isAdmin = false;
             this.lastVisitedClass = null;
           }
-          
+
           resolve(user);
         });
 
@@ -183,13 +188,13 @@ export const AuthService = {
       RolesService.invalidateAdminCache();
       const wasAdmin = this.isAdmin;
       this.isAdmin = await RolesService.isAdmin(this.currentUser);
-      
+
       console.log('🔍 Admin status check:', {
         user: this.currentUser?.email,
         wasAdmin,
         isAdmin: this.isAdmin
       });
-      
+
       if (wasAdmin !== this.isAdmin) {
         console.log('🔄 Admin status changed, dispatching event');
         window.dispatchEvent(new CustomEvent('admin-status-changed'));
@@ -205,27 +210,27 @@ export const AuthService = {
       if (this.adminListenerUnsubscribe) {
         this.adminListenerUnsubscribe();
       }
-      
+
       // Listen for changes in both fixed and designated admins
       const fixedAdminsRef = ref(db, 'fixed_admins');
       const designatedAdminsRef = ref(db, 'designated_admins');
-      
+
       const handleAdminChange = () => {
         console.log('🔄 Cambios detectados en admins, actualizando estado...');
         RolesService.invalidateAdminCache();
         this.updateAdminStatus();
       };
-      
+
       // Set up listeners for both paths
       const unsubFixed = onValue(fixedAdminsRef, handleAdminChange);
       const unsubDesignated = onValue(designatedAdminsRef, handleAdminChange);
-      
+
       // Store unsubscribe function that cleans up both listeners
       this.adminListenerUnsubscribe = () => {
         unsubFixed();
         unsubDesignated();
       };
-      
+
       console.log('✅ Listeners de admin configurados');
     } catch (error) {
       console.error('❌ Error configurando listeners de admin:', error);
@@ -237,26 +242,26 @@ export const AuthService = {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       this.currentUser = userCredential.user;
-      
+
       // Force a fresh check of admin status
       RolesService.invalidateAdminCache();
       this.isAdmin = await RolesService.isAdmin(userCredential.user);
       this.lastVisitedClass = await RolesService.getLastVisitedClass(email);
-      
+
       console.log('✅ Login exitoso:', {
         user: email,
         isAdmin: this.isAdmin,
         lastClass: this.lastVisitedClass
       });
-      
+
       // Set up admin change listeners
       this.listenForAdminChanges();
-      
+
       // Save credentials for future auto-login (unless it's an auto-login attempt)
       if (saveCredentials) {
         this.saveCredentials(email, password);
       }
-      
+
       return userCredential.user;
     } catch (error) {
       console.error('❌ Error al iniciar sesión:', error);
@@ -273,15 +278,15 @@ export const AuthService = {
       if (this.authStateUnsubscribe) {
         this.authStateUnsubscribe();
       }
-      
+
       // Clear saved credentials on logout
       this.clearSavedCredentials();
-      
+
       await signOut(auth);
       this.currentUser = null;
       this.isAdmin = false;
       this.lastVisitedClass = null;
-      
+
       console.log('✅ Sesión cerrada correctamente');
     } catch (error) {
       console.error('❌ Error al cerrar sesión:', error);

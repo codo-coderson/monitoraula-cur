@@ -12,11 +12,12 @@ import { DatabaseService } from './services/database.js';
 import { AuthService } from './services/auth.js';
 import { FontSizeService } from './utils/fontsize.js';
 import { CleanupService } from './services/cleanup.js';
+import { StatusOverlay } from './components/StatusOverlay.js';
 
 class App {
   constructor() {
     console.log('🚀 Iniciando aplicación...');
-    
+
     // Inicializar tamaño de fuente
     FontSizeService.init();
 
@@ -29,14 +30,49 @@ class App {
       }
     });
 
+    // Inicializar Overlay de Estado
+    this.statusOverlay = new StatusOverlay(document.body);
+    this.isOffline = false;
+
+    // Monitorizar Conexión
+    DatabaseService.monitorConnection((isConnected) => {
+      this.isOffline = !isConnected;
+      if (!isConnected) {
+        console.warn('❌ SIN CONEXIÓN: Bloqueando interfaz');
+        this.statusOverlay.show('offline');
+      } else {
+        console.log('✅ RECONECTADO: Restaurando interfaz');
+        // Solo ocultar si no hay problemas de autenticación O si estamos en login
+        if (AuthService.isAuthenticated() || (this.currentView === this.views.login)) {
+          this.statusOverlay.hide();
+        }
+      }
+    });
+
+    // Monitorizar Autenticación (evita "falsa carga")
+    AuthService.subscribeToAuthChanges((user) => {
+      if (!user) {
+        console.warn('⚠️ CAMBIO DE ESTADO: Usuario desconectado');
+        // Solo mostrar overlay si ya estamos en una vista protegida (evitar mostrar en login inicial)
+        if (this.initialNavigationDone && this.currentView !== this.views.login) {
+          this.statusOverlay.show('auth');
+        }
+      } else {
+        console.log('✅ CAMBIO DE ESTADO: Usuario conectado');
+        if (!this.isOffline) {
+          this.statusOverlay.hide();
+        }
+      }
+    });
+
     this.container = document.getElementById('app');
     if (!this.container) {
       console.error('❌ No se encontró el contenedor #app');
       return;
     }
-    
+
     console.log('✅ Contenedor encontrado');
-    
+
     try {
       // Crear estructura básica
       this.container.innerHTML = `
@@ -57,7 +93,7 @@ class App {
       this.initialNavigationDone = false;
 
       console.log('✅ Header y Loading creados');
-      
+
       // Inicializar vistas
       this.views = {
         login: new LoginView(this.mainContainer),
@@ -100,7 +136,7 @@ class App {
     try {
       // Initialize auth service with a Promise.race to enforce timeout
       const authInitPromise = AuthService.init();
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Auth timeout')), 2800)
       );
 
@@ -118,13 +154,13 @@ class App {
 
       if (AuthService.isAuthenticated()) {
         console.log('✅ Usuario autenticado:', AuthService.getCurrentUser()?.email);
-        
+
         // Update loading message
         this.loadingComponent.render('Cargando datos...');
-        
+
         // Load database data with timeout
         const dataLoadPromise = DatabaseService.loadInitialData();
-        const dataTimeoutPromise = new Promise((_, reject) => 
+        const dataTimeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Data load timeout')), 5000)
         );
 
@@ -135,13 +171,13 @@ class App {
           // If data load fails, still try to navigate but show a warning
           alert('Hubo un problema cargando los datos. Algunos elementos podrían no estar disponibles.');
         }
-        
+
         // Ensure we have valid data before proceeding
         const clases = DatabaseService.getClases();
         console.log('📚 Clases disponibles:', clases);
-        
+
         this.initialNavigationDone = true;
-        
+
         // Navigate to the appropriate view
         this.navegarDirecto();
       } else {
@@ -179,7 +215,7 @@ class App {
 
     // Refresh header with user info
     this.header.refresh();
-    
+
     // Clean up old records
     try {
       CleanupService.limpiarRegistrosAntiguos();
@@ -189,13 +225,13 @@ class App {
 
     const clases = DatabaseService.getClases();
     console.log('🎯 Navegando directo, clases disponibles:', clases);
-    
+
     if (clases && clases.length > 0) {
       // Determine initial class to show
       const claseInicial = (AuthService.lastVisitedClass && clases.includes(AuthService.lastVisitedClass))
         ? AuthService.lastVisitedClass
         : clases[0];
-      
+
       console.log('📍 Navegando a clase inicial:', claseInicial);
       this.navegarA('clase', { clase: claseInicial });
     } else {
@@ -239,10 +275,10 @@ class App {
         tabsNav.style.display = 'none';
       } else {
         header.style.display = 'block';
-        
+
         // Update header to show current user
         this.header.refresh();
-        
+
         if (vista === 'clase') {
           const clases = DatabaseService.getClases();
           if (clases && clases.length > 0) {
@@ -257,7 +293,7 @@ class App {
             this.tabsNav.claseActual = params.clase;
             this.tabsNav.render();
             tabsNav.style.display = 'block';
-            
+
             // Save last visited class
             if (params.clase) {
               AuthService.updateLastVisitedClass(params.clase);
@@ -287,7 +323,7 @@ class App {
 
       // Show/hide font size controls
       const controls = document.getElementById('font-size-controls');
-      if (['login','carga'].includes(vista)) {
+      if (['login', 'carga'].includes(vista)) {
         controls.style.display = 'none';
       } else {
         controls.style.display = 'flex';
