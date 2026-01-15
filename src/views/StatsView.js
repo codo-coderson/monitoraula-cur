@@ -29,11 +29,11 @@ export class StatsView {
 
     this.container.innerHTML = `
       <div style="max-width: 1000px; margin: 0 auto; padding: 1rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
           <h2 style="margin: 0; color: var(--gray-800);">Estadísticas de Usuarios</h2>
-          <div style="display: flex; gap: 1rem; align-items: center;">
+          <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
             <input type="date" id="statsStartDate" value="${this.startDate}" min="${minDate}" max="${maxDate}" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
-            <span>hasta</span>
+            <span style="white-space: nowrap;">hasta</span>
             <input type="date" id="statsEndDate" value="${this.endDate}" min="${minDate}" max="${maxDate}" style="padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px;">
             <button id="btnFilterStats" style="
               padding: 0.5rem 1rem;

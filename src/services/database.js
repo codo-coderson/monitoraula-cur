@@ -182,14 +182,22 @@ export const DatabaseService = {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const stats = {};
+    const allKnownUsers = new Set();
 
     // Recorrer toda la estructura de registros
     const registrosGlobales = cache.registros || {};
 
+    // Primera pasada: Recolectar estadísticas y todos los usuarios conocidos
     Object.values(registrosGlobales).forEach(claseData => {
       Object.values(claseData || {}).forEach(alumnoData => {
         Object.entries(alumnoData || {}).forEach(([fechaStr, registro]) => {
-          // Verificar si la fecha está en rango
+
+          // Recolectar usuarios de este día (history check)
+          (registro.salidas || []).forEach(salida => {
+            if (salida.usuario) allKnownUsers.add(salida.usuario);
+          });
+
+          // Verificar si la fecha está en rango para el conteo
           const fecha = new Date(fechaStr);
           if (fecha >= start && fecha <= end) {
             (registro.salidas || []).forEach(salida => {
@@ -218,6 +226,17 @@ export const DatabaseService = {
       });
     });
 
+    // Segunda pasada: Asegurar que todos los usuarios conocidos estén en la lista
+    allKnownUsers.forEach(email => {
+      if (!stats[email]) {
+        stats[email] = {
+          email: email,
+          total: 0,
+          byDate: {}
+        };
+      }
+    });
+
     return Object.values(stats).sort((a, b) => b.total - a.total);
   }
-}; 
+};
