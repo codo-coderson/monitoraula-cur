@@ -71,8 +71,7 @@ export class ClaseView {
                   border: none;
                   border-radius: 4px;
                   cursor: pointer;
-                "
-              >
+                ">
                 Cargar Alumnos
               </button>
             ` : `
@@ -99,7 +98,11 @@ export class ClaseView {
       
       console.log('✅ ClaseView: Renderizando', Object.keys(alumnos).length, 'alumnos');
       
-      for (const [alumnoId, data] of Object.entries(alumnos)) {
+      // Ordenar los alumnos alfabéticamente por nombre antes de renderizar
+      const alumnosOrdenados = Object.entries(alumnos)
+        .sort(([, a], [, b]) => a.nombre.localeCompare(b.nombre));
+
+      for (const [alumnoId, data] of alumnosOrdenados) {
         const cardContainer = document.createElement('div');
         alumnosContainer.appendChild(cardContainer);
         
@@ -133,4 +136,4 @@ export class ClaseView {
     }
     return clase || '';
   }
-} 
+}

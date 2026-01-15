@@ -19,6 +19,7 @@ export class CargaAlumnosView {
           margin-bottom: 2rem;
         ">
           <h3 style="margin-top: 0; margin-bottom: 1rem;">Instrucciones</h3>
+          <p>De momento, la carga de alumnos solo funciona desde un ordenador de escritorio.</p>
           <p>El archivo Excel debe tener las siguientes columnas:</p>
           <ul>
             <li><strong>"Alumno"</strong> o <strong>"Nombre"</strong>: Nombre completo del alumno</li>
