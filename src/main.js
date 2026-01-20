@@ -326,6 +326,7 @@ class App {
       // Render the view with appropriate parameters
       if (vista === 'clase') {
         this.currentView.render(params.clase);
+        AuthService.updateLastVisitedClass(params.clase);
       } else if (vista === 'informe') {
         this.currentView.render(params.clase, params.alumnoId);
       } else {
